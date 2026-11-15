@@ -5026,7 +5026,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && SV != null
 
 // ---------- AI coach for a solve: Claude (built in when the page runs as a Claude artifact, or your own
 // Anthropic API key) or Gemini (your own Google AI key). Keys stay in this browser; calls go straight to the provider.
-const AI_DEFAULT = { provider: 'ollama', keys: { claude: '', gemini: '' }, model: { claude: 'claude-sonnet-5-5', gemini: 'gemini-3.6-flash', ollama: 'qwen3.5:latest' } };
+const AI_DEFAULT = { provider: 'claude', keys: { claude: '', gemini: '' }, model: { claude: 'claude-sonnet-5-5', gemini: 'gemini-3.6-flash' } };
 let AIS = (() => { try { const v = JSON.parse(localStorage.getItem('cfop-lab-ai') || 'null'); return v ? { ...AI_DEFAULT, ...v, keys: { ...AI_DEFAULT.keys, ...v.keys }, model: { ...AI_DEFAULT.model, ...v.model } } : JSON.parse(JSON.stringify(AI_DEFAULT)); } catch (e) { return JSON.parse(JSON.stringify(AI_DEFAULT)); } })();
 const aiSave = () => { try { localStorage.setItem('cfop-lab-ai', JSON.stringify(AIS)); } catch (e) {} };
 const AI = { busy: false, err: '', open: false, builtIn: undefined };
@@ -5037,12 +5037,8 @@ function aiBuiltIn() {
     .then(s => { AI.builtIn = s; aiRefresh(); return s; });
   return aiBuiltInP;
 }
-const PROV = { claude: 'Claude', gemini: 'Gemini', ollama: 'Local Ollama' };
-// Migrate existing browser settings to the local provider by default.
-if (!AIS.provider || AIS.provider === 'claude' || AIS.provider === 'gemini') AIS.provider = 'ollama';
-// Upgrade the previous Ollama default to the installed Qwen 3.5 model.
-if (!AIS.model.ollama || AIS.model.ollama === 'qwen2.5') AIS.model.ollama = 'qwen3.5:latest';
-const aiReady = () => AIS.provider === 'ollama' || (!!(AI.builtIn && AIS.provider === 'claude') || !!AIS.keys[AIS.provider]);
+const PROV = { claude: 'Claude', gemini: 'Gemini' };
+const aiReady = () => !!(AI.builtIn && AIS.provider === 'claude') || !!AIS.keys[AIS.provider];
 
 // ---- what the coach is told
 function aiData(s) {
@@ -5078,24 +5074,6 @@ Reply with ONLY a JSON object, no markdown fence:
 // ---- providers
 async function aiCall(prompt) {
   const p = AIS.provider;
-  // Send analysis directly to the Ollama server running on this Windows PC.
-  if (p === 'ollama') {
-    const model = (AIS.model.ollama || AI_DEFAULT.model.ollama || 'qwen2.5').trim();
-    let res;
-    try {
-      res = await fetch('http://127.0.0.1:11434/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, prompt, format: 'json', stream: false })
-      });
-    } catch (e) {
-      throw new Error('Could not connect to Ollama at 127.0.0.1:11434. Check that Ollama is running and that OLLAMA_ORIGINS allows this page.');
-    }
-    const j = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error((j.error || ('Ollama error ' + res.status)));
-    if (typeof j.response !== 'string' || !j.response.trim()) throw new Error('Ollama returned an empty response. Check the selected model and try again.');
-    return { text: j.response, by: 'Local Ollama (' + model + ')', cut: false };
-  }
   if (p === 'claude' && AI.builtIn && !AIS.keys.claude) { const r = await AI.builtIn(prompt, { modelTier: 'default' }); return { text: r.text, by: 'Claude' }; }
   const key = AIS.keys[p]; if (!key) throw new Error(`Add your ${PROV[p]} API key in AI settings first.`);
   if (p === 'claude') {
@@ -5164,17 +5142,17 @@ function aiResultHTML(a) {
 function aiSettingsHTML() {
   const p = AIS.provider;
   return `<form class="ai-set" data-aiform>
-    <div class="ai-prov" role="radiogroup" aria-label="AI provider">${['ollama'].map(k => `<label class="chip ${p === k ? 'on' : ''}"><input type="radio" name="aiprov" value="${k}" checked>${PROV[k]}</label>`).join('')}</div>
-    ${p === 'ollama' ? '<p class="hint">Runs locally through Ollama. No cloud API key is needed.</p>' : `<label class="ai-f"><span>${PROV[p]} API key</span><input type="password" id="ai-key" autocomplete="off" spellcheck="false" value="${esc(AIS.keys[p] || '')}"></label>`}
+    <div class="ai-prov" role="radiogroup" aria-label="AI provider">${['claude', 'gemini'].map(k => `<label class="chip ${p === k ? 'on' : ''}"><input type="radio" name="aiprov" value="${k}" ${p === k ? 'checked' : ''}>${PROV[k]}</label>`).join('')}</div>
+    <label class="ai-f"><span>${PROV[p]} API key${p === 'claude' && AI.builtIn ? ' (optional here: built-in Claude works without one)' : ''}</span><input type="password" id="ai-key" autocomplete="off" spellcheck="false" placeholder="${p === 'claude' ? 'sk-ant-…' : 'AIza…'}" value="${esc(AIS.keys[p] || '')}"></label>
     <label class="tog ai-autotog"><input type="checkbox" id="ai-auto" ${AIS.auto ? 'checked' : ''}> Analyse every solve automatically (shows on the result screen; one request per solve)</label>
     <label class="ai-f"><span>Model</span><input id="ai-model" autocomplete="off" spellcheck="false" value="${esc(AIS.model[p] || '')}"></label>
     <div class="row"><button class="primary small" type="submit">Save</button>${AIS.keys[p] ? `<button class="ghost small" type="button" data-ai="forget">Remove key</button>` : ''}<button class="ghost small" type="button" data-ai="settings">Close</button></div>
-    <p class="hint">${p === 'ollama' ? 'The prompt is sent to Ollama on this computer at 127.0.0.1:11434. The model must already be installed in Ollama.' : `Your key is kept only in this browser and sent only to ${p === 'claude' ? 'Anthropic' : 'Google'}.`}</p>
+    <p class="hint">Your key is kept only in this browser and sent only to ${p === 'claude' ? 'Anthropic' : 'Google'}. Get one at ${p === 'claude' ? 'console.anthropic.com' : 'aistudio.google.com'}. Each analysis is one small request on your account.</p>
   </form>`;
 }
 function aiBoxHTML(T) {
   const s = T.obj;
-  if (AIS.provider === 'claude' && AI.builtIn === undefined) aiBuiltIn();
+  if (AI.builtIn === undefined) aiBuiltIn();
   const ready = aiReady(), who = AIS.provider === 'claude' && AI.builtIn && !AIS.keys.claude ? 'Claude' : PROV[AIS.provider];
   const head = `<div class="ai-bar">${s.ai ? '' : `<button class="ai-btn ${AI.busy ? 'busy' : ''}" data-ai="run" ${AI.busy || !ready ? 'disabled' : ''}><span class="ai-spark" aria-hidden="true">✦</span>${AI.busy ? 'Analysing…' : 'AI analyse'}</button>`}
       ${s.ai && !AI.busy ? `<button class="ai-btn small" data-ai="run" ${ready ? '' : 'disabled'}><span class="ai-spark" aria-hidden="true">✦</span>Regenerate</button>` : s.ai ? '<button class="ai-btn small busy" disabled><span class="ai-spark" aria-hidden="true">✦</span>Analysing…</button>' : ''}
@@ -5210,10 +5188,7 @@ document.addEventListener('change', e => {
 });
 document.addEventListener('submit', e => {
   const f = e.target.closest('[data-aiform]'); if (!f) return; e.preventDefault();
-  const p = AIS.provider;
-  const keyInput = document.getElementById('ai-key');
-  if (keyInput) AIS.keys[p] = (keyInput.value || '').trim();
-  AIS.model[p] = (document.getElementById('ai-model').value || '').trim() || AI_DEFAULT.model[p];
+  const p = AIS.provider; AIS.keys[p] = (document.getElementById('ai-key').value || '').trim(); AIS.model[p] = (document.getElementById('ai-model').value || '').trim() || AI_DEFAULT.model[p];
   aiSave(); AI.open = false; AI.err = ''; aiRefresh(); toast('Saved');
 });
 
