@@ -422,7 +422,6 @@ code { font-family: var(--f-mono); font-size: .92em }
 .tm-abort { min-height: 44px; display: flex; justify-content: center; align-items: center; margin-top: 6px }
 .tm-abort .hint { opacity: .55; font-size: 12.5px }
 .tm-abortbtn { min-width: 160px; border-color: var(--accent); color: var(--accent); font-weight: 700 }
-body.tm-focusing #main { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none }
 .mzone { cursor: pointer; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; border-radius: 16px }
 #tm-clock.holding { color: var(--muted) } #tm-clock.armed, .armedtxt { color: #2f6fe4 }
 :root[data-theme="dark"] #tm-clock.armed, :root[data-theme="dark"] .armedtxt { color: #5b9bff }
@@ -4599,7 +4598,7 @@ function resultHTML() {
   return `<div class="tm-result">
     ${L.manual ? '' : `<div class="tm-result-bg" aria-hidden="true">${cubeSlot('tm')}</div>`}
     <div class="tm-result-fg">
-      <div id="tm-clock" class="clock ${SM.conn === 'connected' ? '' : 'mzone'}">${L.pen === 'DNF' ? 'DNF' : fmtS(solveTime(L)) + (L.pen ? '+' : '')}</div>
+      <div id="tm-clock" class="clock">${L.pen === 'DNF' ? 'DNF' : fmtS(solveTime(L)) + (L.pen ? '+' : '')}</div>
       ${C && C.solve === L && (C.pb || C.avgs.length) ? `<div class="pbrow">${C.pb ? `<span class="pb">New PB!</span>${C.prev != null ? `<span class="pbprev">previous best ${fmtS(C.prev)}</span>` : ''}` : ''}${C.avgs.map(a => `<span class="pb small">New ${a} PB</span>`).join('')}</div>` : ''}
       <p class="tm-sub">${L.manual ? 'Timed manually' : ''}${turns ? `${(turns / (L.t / 1000)).toFixed(2)} TPS · ${turns} turns` : ''}${L.rot ? ` · ${L.rot.length} rotation${L.rot.length === 1 ? '' : 's'}` : ''}${rec != null ? ` · ${Math.round(rec * 100)}% recognition` : ''}</p>
       ${resultBarHTML(L)}
@@ -4782,29 +4781,17 @@ function focusStatus() {
   return TM.phase === 'inspect' ? 'Inspection. The timer starts on your first turn.' : TM.phase === 'ready' ? 'The timer starts on your first turn.' : '';
 }
 const manualOK = () => timerActive() && SM.conn !== 'connected' && !document.querySelector('.backdrop:not([hidden])');
-// While a finger or key is held, only recolour the time in place: rebuilding the page under a finger
-// detaches the touched element, and the phone then never reports the finger lifting.
-function mPaint() {
-  const c = document.getElementById('tm-clock'); if (!c) return;
-  c.classList.toggle('holding', TM.hold === 1); c.classList.toggle('armed', TM.hold === 2);
-  if (TM.hold && TM.phase !== 'inspect') c.textContent = '0.00';
-  const st = document.querySelector('.tm-focus .tm-status'); if (st) st.textContent = focusStatus();
-  const hint = document.querySelector('.tm-clock.mzone .tm-status');
-  if (hint && TM.phase !== 'inspect') { if (TM.hold) { hint.dataset.was ??= hint.innerHTML; hint.textContent = TM.hold === 2 ? 'Let go to start' : 'Keep holding…'; } else if (hint.dataset.was != null) { hint.innerHTML = hint.dataset.was; delete hint.dataset.was; } }
-}
 function mHoldStart() {
-  TM.hold = 1; clearTimeout(TM.holdT); mPaint();
-  TM.holdT = setTimeout(() => { if (TM.hold === 1) { TM.hold = 2; mPaint(); } }, 300);
+  TM.hold = 1; clearTimeout(TM.holdT);
+  TM.holdT = setTimeout(() => { if (TM.hold === 1) { TM.hold = 2; timerUpdate(); } }, 300);
 }
-function mCancelHold() { TM.hold = 0; TM.armInsp = false; clearTimeout(TM.holdT); mPaint(); if (TM.phase !== 'inspect') { const c = document.getElementById('tm-clock'); if (c) c.textContent = clockText(); } }
 function mDown(now) {
   if (TM.phase === 'running' && TM.manual) { mStop(now); TM.justStopped = true; return true; }
-  TM.justStopped = false;
   if (TM.phase === 'idle' || TM.phase === 'done') {
     if (TM.inspection) { TM.armInsp = true; return true; }   // inspection starts when you let go
-    mHoldStart(); return true;
+    TM.phase = 'ready'; TM.manual = true; TM.showResult = false; mHoldStart(); timerUpdate(); return true;
   }
-  if (TM.phase === 'inspect' && TM.manual) { mHoldStart(); return true; }
+  if (TM.phase === 'inspect' && TM.manual) { mHoldStart(); timerUpdate(); return true; }
   return false;
 }
 function mUp(now) {
@@ -4818,9 +4805,9 @@ function mUp(now) {
   if (armed) {
     const insp = TM.phase === 'inspect' ? (now - TM.inspectStart) / 1000 : 0;
     TM.penaltyInspect = insp > 17 ? 'DNF' : insp > 15 ? 2000 : 0;
-    TM.manual = true; TM.showResult = false; TM.phase = 'running'; TM.t0 = now; startTick(); timerUpdate(); window.scrollTo(0, 0);
-  } else mCancelHold();
-  return true;
+    TM.phase = 'running'; TM.t0 = now; startTick();
+  } else if (TM.phase === 'ready') TM.phase = 'idle';
+  timerUpdate(); return true;
 }
 function mStop(now) {
   TM.manual = false; TM.hold = 0;
@@ -4836,24 +4823,15 @@ document.addEventListener('keydown', e => {
   mDown(performance.now());
 });
 document.addEventListener('keyup', e => { if (e.code !== 'Space' || !manualOK() || typing(e)) return; e.preventDefault(); mUp(performance.now()); });
-// Where a touch or click counts: the time while waiting, the whole screen during inspection and the solve
-const NOT_ZONE = 'button, a, input, select, label, .pop, .modal, .tm-side, .rbar, .ai-mini';
-const mZone = t => !t.closest(NOT_ZONE) && (!!(TM.manual && ['inspect', 'running'].includes(TM.phase)) || !!t.closest('.mzone'));
-// touch: touch events with preventDefault stop long-press menus, text selection and scrolling from interrupting the hold
-document.addEventListener('touchstart', e => {
-  if (!manualOK() || e.touches.length > 1 || !mZone(e.target)) return;
-  if (mDown(performance.now())) e.preventDefault();
-}, { passive: false });
-const tUp = e => { if (manualOK() && (TM.hold || TM.armInsp || TM.justStopped)) { if (e.cancelable) e.preventDefault(); mUp(performance.now()); } };
-document.addEventListener('touchend', tUp, { passive: false });
-document.addEventListener('touchcancel', () => { if (TM.hold || TM.armInsp) mCancelHold(); TM.justStopped = false; });
-document.addEventListener('contextmenu', e => { if (manualOK() && mZone(e.target)) e.preventDefault(); });
-// mouse (and pen): pointer events
+// touch: the time is the button while waiting; during inspection and the solve, the whole screen is
 document.addEventListener('pointerdown', e => {
-  if (e.pointerType === 'touch' || !manualOK() || e.button > 0 || !mZone(e.target)) return;
+  if (!manualOK() || e.button > 0 || e.target.closest('button, a, input, select, label, .pop, .modal, .tm-side')) return;
+  const zone = (TM.manual && ['inspect', 'ready', 'running'].includes(TM.phase)) || e.target.closest('.tm-clock.mzone, .tm-result-fg > .clock');
+  if (!zone) return;
   if (mDown(performance.now())) e.preventDefault();
 });
-document.addEventListener('pointerup', e => { if (e.pointerType !== 'touch' && manualOK() && (TM.hold || TM.armInsp || TM.justStopped)) mUp(performance.now()); });
+const pUp = e => { if (manualOK() && (TM.hold || TM.armInsp || TM.justStopped)) { mUp(performance.now()); e.preventDefault(); } };
+document.addEventListener('pointerup', pUp); document.addEventListener('pointercancel', pUp);
 
 // ---- abort: tap anywhere during a solve to reveal the button (it hides again after a few seconds)
 const focusPhase = () => ['inspect', 'ready', 'running'].includes(TM.phase);
@@ -5048,7 +5026,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && SV != null
 
 // ---------- AI coach for a solve: Claude (built in when the page runs as a Claude artifact, or your own
 // Anthropic API key) or Gemini (your own Google AI key). Keys stay in this browser; calls go straight to the provider.
-const AI_DEFAULT = { provider: 'claude', keys: { claude: '', gemini: '' }, model: { claude: 'claude-sonnet-5-5', gemini: 'gemini-3.6-flash' } };
+const AI_DEFAULT = { provider: 'ollama', keys: { claude: '', gemini: '' }, model: { claude: 'claude-sonnet-5-5', gemini: 'gemini-3.6-flash', ollama: 'qwen3.5:latest' } };
 let AIS = (() => { try { const v = JSON.parse(localStorage.getItem('cfop-lab-ai') || 'null'); return v ? { ...AI_DEFAULT, ...v, keys: { ...AI_DEFAULT.keys, ...v.keys }, model: { ...AI_DEFAULT.model, ...v.model } } : JSON.parse(JSON.stringify(AI_DEFAULT)); } catch (e) { return JSON.parse(JSON.stringify(AI_DEFAULT)); } })();
 const aiSave = () => { try { localStorage.setItem('cfop-lab-ai', JSON.stringify(AIS)); } catch (e) {} };
 const AI = { busy: false, err: '', open: false, builtIn: undefined };
@@ -5059,8 +5037,12 @@ function aiBuiltIn() {
     .then(s => { AI.builtIn = s; aiRefresh(); return s; });
   return aiBuiltInP;
 }
-const PROV = { claude: 'Claude', gemini: 'Gemini' };
-const aiReady = () => !!(AI.builtIn && AIS.provider === 'claude') || !!AIS.keys[AIS.provider];
+const PROV = { claude: 'Claude', gemini: 'Gemini', ollama: 'Local Ollama' };
+// Migrate existing browser settings to the local provider by default.
+if (!AIS.provider || AIS.provider === 'claude' || AIS.provider === 'gemini') AIS.provider = 'ollama';
+// Upgrade the previous Ollama default to the installed Qwen 3.5 model.
+if (!AIS.model.ollama || AIS.model.ollama === 'qwen2.5') AIS.model.ollama = 'qwen3.5:latest';
+const aiReady = () => AIS.provider === 'ollama' || (!!(AI.builtIn && AIS.provider === 'claude') || !!AIS.keys[AIS.provider]);
 
 // ---- what the coach is told
 function aiData(s) {
@@ -5096,6 +5078,24 @@ Reply with ONLY a JSON object, no markdown fence:
 // ---- providers
 async function aiCall(prompt) {
   const p = AIS.provider;
+  // Send analysis directly to the Ollama server running on this Windows PC.
+  if (p === 'ollama') {
+    const model = (AIS.model.ollama || AI_DEFAULT.model.ollama || 'qwen2.5').trim();
+    let res;
+    try {
+      res = await fetch('http://127.0.0.1:11434/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, prompt, format: 'json', stream: false })
+      });
+    } catch (e) {
+      throw new Error('Could not connect to Ollama at 127.0.0.1:11434. Check that Ollama is running and that OLLAMA_ORIGINS allows this page.');
+    }
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error((j.error || ('Ollama error ' + res.status)));
+    if (typeof j.response !== 'string' || !j.response.trim()) throw new Error('Ollama returned an empty response. Check the selected model and try again.');
+    return { text: j.response, by: 'Local Ollama (' + model + ')', cut: false };
+  }
   if (p === 'claude' && AI.builtIn && !AIS.keys.claude) { const r = await AI.builtIn(prompt, { modelTier: 'default' }); return { text: r.text, by: 'Claude' }; }
   const key = AIS.keys[p]; if (!key) throw new Error(`Add your ${PROV[p]} API key in AI settings first.`);
   if (p === 'claude') {
@@ -5164,17 +5164,17 @@ function aiResultHTML(a) {
 function aiSettingsHTML() {
   const p = AIS.provider;
   return `<form class="ai-set" data-aiform>
-    <div class="ai-prov" role="radiogroup" aria-label="AI provider">${['claude', 'gemini'].map(k => `<label class="chip ${p === k ? 'on' : ''}"><input type="radio" name="aiprov" value="${k}" ${p === k ? 'checked' : ''}>${PROV[k]}</label>`).join('')}</div>
-    <label class="ai-f"><span>${PROV[p]} API key${p === 'claude' && AI.builtIn ? ' (optional here: built-in Claude works without one)' : ''}</span><input type="password" id="ai-key" autocomplete="off" spellcheck="false" placeholder="${p === 'claude' ? 'sk-ant-…' : 'AIza…'}" value="${esc(AIS.keys[p] || '')}"></label>
+    <div class="ai-prov" role="radiogroup" aria-label="AI provider">${['ollama'].map(k => `<label class="chip ${p === k ? 'on' : ''}"><input type="radio" name="aiprov" value="${k}" checked>${PROV[k]}</label>`).join('')}</div>
+    ${p === 'ollama' ? '<p class="hint">Runs locally through Ollama. No cloud API key is needed.</p>' : `<label class="ai-f"><span>${PROV[p]} API key</span><input type="password" id="ai-key" autocomplete="off" spellcheck="false" value="${esc(AIS.keys[p] || '')}"></label>`}
     <label class="tog ai-autotog"><input type="checkbox" id="ai-auto" ${AIS.auto ? 'checked' : ''}> Analyse every solve automatically (shows on the result screen; one request per solve)</label>
     <label class="ai-f"><span>Model</span><input id="ai-model" autocomplete="off" spellcheck="false" value="${esc(AIS.model[p] || '')}"></label>
     <div class="row"><button class="primary small" type="submit">Save</button>${AIS.keys[p] ? `<button class="ghost small" type="button" data-ai="forget">Remove key</button>` : ''}<button class="ghost small" type="button" data-ai="settings">Close</button></div>
-    <p class="hint">Your key is kept only in this browser and sent only to ${p === 'claude' ? 'Anthropic' : 'Google'}. Get one at ${p === 'claude' ? 'console.anthropic.com' : 'aistudio.google.com'}. Each analysis is one small request on your account.</p>
+    <p class="hint">${p === 'ollama' ? 'The prompt is sent to Ollama on this computer at 127.0.0.1:11434. The model must already be installed in Ollama.' : `Your key is kept only in this browser and sent only to ${p === 'claude' ? 'Anthropic' : 'Google'}.`}</p>
   </form>`;
 }
 function aiBoxHTML(T) {
   const s = T.obj;
-  if (AI.builtIn === undefined) aiBuiltIn();
+  if (AIS.provider === 'claude' && AI.builtIn === undefined) aiBuiltIn();
   const ready = aiReady(), who = AIS.provider === 'claude' && AI.builtIn && !AIS.keys.claude ? 'Claude' : PROV[AIS.provider];
   const head = `<div class="ai-bar">${s.ai ? '' : `<button class="ai-btn ${AI.busy ? 'busy' : ''}" data-ai="run" ${AI.busy || !ready ? 'disabled' : ''}><span class="ai-spark" aria-hidden="true">✦</span>${AI.busy ? 'Analysing…' : 'AI analyse'}</button>`}
       ${s.ai && !AI.busy ? `<button class="ai-btn small" data-ai="run" ${ready ? '' : 'disabled'}><span class="ai-spark" aria-hidden="true">✦</span>Regenerate</button>` : s.ai ? '<button class="ai-btn small busy" disabled><span class="ai-spark" aria-hidden="true">✦</span>Analysing…</button>' : ''}
@@ -5210,7 +5210,10 @@ document.addEventListener('change', e => {
 });
 document.addEventListener('submit', e => {
   const f = e.target.closest('[data-aiform]'); if (!f) return; e.preventDefault();
-  const p = AIS.provider; AIS.keys[p] = (document.getElementById('ai-key').value || '').trim(); AIS.model[p] = (document.getElementById('ai-model').value || '').trim() || AI_DEFAULT.model[p];
+  const p = AIS.provider;
+  const keyInput = document.getElementById('ai-key');
+  if (keyInput) AIS.keys[p] = (keyInput.value || '').trim();
+  AIS.model[p] = (document.getElementById('ai-model').value || '').trim() || AI_DEFAULT.model[p];
   aiSave(); AI.open = false; AI.err = ''; aiRefresh(); toast('Saved');
 });
 
