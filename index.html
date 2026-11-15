@@ -5,22 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Cubest">
-<meta name="application-name" content="Cubest">
-<meta name="theme-color" content="#121418">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<script>if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));</script>
+<meta name="apple-mobile-web-app-title" content="CFOP Lab">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
-<title>Cubest</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj4gPGRlZnM+PHJhZGlhbEdyYWRpZW50IGlkPSJiZyIgY3g9IjUwJSIgY3k9IjM4JSIgcj0iNzUlIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMyYTJmM2EiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMxMjE0MTgiLz48L3JhZGlhbEdyYWRpZW50PiA8bGluZWFyR3JhZGllbnQgaWQ9InJpbmciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNmZjlhNTIiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiNlMjU3MGIiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz4gPHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIHJ4PSIxMTIiIGZpbGw9InVybCgjYmcpIi8+IDxwb2x5Z29uIHBvaW50cz0iMzg1LjkwLDE5My4wMCAyNTYuMDAsMTE4LjAwIDEyNi4xMCwxOTMuMDAgMTI2LjEwLDM0My4wMCAyNTYuMDAsNDE4LjAwIDM4NS45MCwzNDMuMDAiIGZpbGw9IiMwNzA4MGEiIHN0cm9rZT0iIzA3MDgwYSIgc3Ryb2tlLXdpZHRoPSIyMiIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPiA8cG9seWdvbiBwb2ludHM9IjI1Ni4wMCwyNjQuMjUgMjkyLjgxLDI0My4wMCAyNTYuMDAsMjIxLjc1IDIxOS4xOSwyNDMuMDAiIGZpbGw9IiNmZmUxNGEiIHN0cm9rZT0iI2ZmZTE0YSIgc3Ryb2tlLXdpZHRoPSI1IiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+IDxwb2x5Z29uIHBvaW50cz0iMjEyLjcwLDIzOS4yNSAyNDkuNTAsMjE4LjAwIDIxMi43MCwxOTYuNzUgMTc1Ljg5LDIxOC4wMCIgZmlsbD0iI2ZmZTE0YSIgc3Ryb2tlPSIjZmZlMTRhIiBzdHJva2Utd2lkdGg9IjUiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4gPHBvbHlnb24gcG9pbnRzPSIxNjkuNDAsMjE0LjI1IDIwNi4yMCwxOTMuMDAgMTY5LjQwLDE3MS43NSAxMzIuNTksMTkzLjAwIiBmaWxsPSIjZmZlMTRhIiBzdHJva2U9IiNmZmUxNGEiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPiA8cG9seWdvbiBwb2ludHM9IjI5OS4zMCwyMzkuMjUgMzM2LjExLDIxOC4wMCAyOTkuMzAsMTk2Ljc1IDI2Mi41MCwyMTguMDAiIGZpbGw9IiNmZmUxNGEiIHN0cm9rZT0iI2ZmZTE0YSIgc3Ryb2tlLXdpZHRoPSI1IiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+IDxwb2x5Z29uIHBvaW50cz0iMjU2LjAwLDIxNC4yNSAyOTIuODEsMTkzLjAwIDI1Ni4wMCwxNzEuNzUgMjE5LjE5LDE5My4wMCIgZmlsbD0iI2ZmZTE0YSIgc3Ryb2tlPSIjZmZlMTRhIiBzdHJva2Utd2lkdGg9IjUiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4gPHBvbHlnb24gcG9pbnRzPSIyMTIuNzAsMTg5LjI1IDI0OS41MCwxNjguMDAgMjEyLjcwLDE0Ni43NSAxNzUuODksMTY4LjAwIiBmaWxsPSIjZmZlMTRhIiBzdHJva2U9IiNmZmUxNGEiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPiA8cG9seWdvbiBwb2ludHM9IjM0Mi42MCwyMTQuMjUgMzc5LjQxLDE5My4wMCAzNDIuNjAsMTcxLjc1IDMwNS44MCwxOTMuMDAiIGZpbGw9IiNmZmUxNGEiIHN0cm9rZT0iI2ZmZTE0YSIgc3Ryb2tlLXdpZHRoPSI1IiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+IDxwb2x5Z29uIHBvaW50cz0iMjk5LjMwLDE4OS4yNSAzMzYuMTEsMTY4LjAwIDI5OS4zMCwxNDYuNzUgMjYyLjUwLDE2OC4wMCIgZmlsbD0iI2ZmZTE0YSIgc3Ryb2tlPSIjZmZlMTRhIiBzdHJva2Utd2lkdGg9IjUiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4gPHBvbHlnb24gcG9pbnRzPSIyNTYuMDAsMTY0LjI1IDI5Mi44MSwxNDMuMDAgMjU2LjAwLDEyMS43NSAyMTkuMTksMTQzLjAwIiBmaWxsPSIjZmZlMTRhIiBzdHJva2U9IiNmZmUxNGEiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPiA8cG9seWdvbiBwb2ludHM9IjI1Mi43NSwyNjkuODggMjE1Ljk1LDI0OC42MiAyMTUuOTUsMjkxLjEyIDI1Mi43NSwzMTIuMzgiIGZpbGw9IiMyZjZmZTQiIHN0cm9rZT0iIzJmNmZlNCIgc3Ryb2tlLXdpZHRoPSI1IiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+IDxwb2x5Z29uIHBvaW50cz0iMjUyLjc1LDMxOS44OCAyMTUuOTUsMjk4LjYyIDIxNS45NSwzNDEuMTIgMjUyLjc1LDM2Mi4zOCIgZmlsbD0iIzJmNmZlNCIgc3Ryb2tlPSIjMmY2ZmU0IiBzdHJva2Utd2lkdGg9IjUiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4gPHBvbHlnb24gcG9pbnRzPSIyNTIuNzUsMzY5Ljg4IDIxNS45NSwzNDguNjIgMjE1Ljk1LDM5MS4xMiAyNTIuNzUsNDEyLjM4IiBmaWxsPSIjMmY2ZmU0IiBzdHJva2U9IiMyZjZmZTQiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPiA8cG9seWdvbiBwb2ludHM9IjIwOS40NSwyNDQuODggMTcyLjY1LDIyMy42MiAxNzIuNjUsMjY2LjEyIDIwOS40NSwyODcuMzgiIGZpbGw9IiMyZjZmZTQiIHN0cm9rZT0iIzJmNmZlNCIgc3Ryb2tlLXdpZHRoPSI1IiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+IDxwb2x5Z29uIHBvaW50cz0iMjA5LjQ1LDI5NC44OCAxNzIuNjUsMjczLjYyIDE3Mi42NSwzMTYuMTIgMjA5LjQ1LDMzNy4zOCIgZmlsbD0iIzJmNmZlNCIgc3Ryb2tlPSIjMmY2ZmU0IiBzdHJva2Utd2lkdGg9IjUiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4gPHBvbHlnb24gcG9pbnRzPSIyMDkuNDUsMzQ0Ljg4IDE3Mi42NSwzMjMuNjIgMTcyLjY1LDM2Ni4xMiAyMDkuNDUsMzg3LjM4IiBmaWxsPSIjMmY2ZmU0IiBzdHJva2U9IiMyZjZmZTQiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPiA8cG9seWdvbiBwb2ludHM9IjE2Ni4xNSwyMTkuODggMTI5LjM0LDE5OC42MiAxMjkuMzQsMjQxLjEyIDE2Ni4xNSwyNjIuMzgiIGZpbGw9IiMyZjZmZTQiIHN0cm9rZT0iIzJmNmZlNCIgc3Ryb2tlLXdpZHRoPSI1IiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+IDxwb2x5Z29uIHBvaW50cz0iMTY2LjE1LDI2OS44OCAxMjkuMzQsMjQ4LjYyIDEyOS4zNCwyOTEuMTIgMTY2LjE1LDMxMi4zOCIgZmlsbD0iIzJmNmZlNCIgc3Ryb2tlPSIjMmY2ZmU0IiBzdHJva2Utd2lkdGg9IjUiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4gPHBvbHlnb24gcG9pbnRzPSIxNjYuMTUsMzE5Ljg4IDEyOS4zNCwyOTguNjIgMTI5LjM0LDM0MS4xMiAxNjYuMTUsMzYyLjM4IiBmaWxsPSIjMmY2ZmU0IiBzdHJva2U9IiMyZjZmZTQiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPiA8cG9seWdvbiBwb2ludHM9IjI1OS4yNSwyNjkuODggMjk2LjA1LDI0OC42MiAyOTYuMDUsMjkxLjEyIDI1OS4yNSwzMTIuMzgiIGZpbGw9IiNlODUwOWEiIHN0cm9rZT0iI2U4NTA5YSIgc3Ryb2tlLXdpZHRoPSI1IiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+IDxwb2x5Z29uIHBvaW50cz0iMjU5LjI1LDMxOS44OCAyOTYuMDUsMjk4LjYyIDI5Ni4wNSwzNDEuMTIgMjU5LjI1LDM2Mi4zOCIgZmlsbD0iI2U4NTA5YSIgc3Ryb2tlPSIjZTg1MDlhIiBzdHJva2Utd2lkdGg9IjUiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4gPHBvbHlnb24gcG9pbnRzPSIyNTkuMjUsMzY5Ljg4IDI5Ni4wNSwzNDguNjIgMjk2LjA1LDM5MS4xMiAyNTkuMjUsNDEyLjM4IiBmaWxsPSIjZTg1MDlhIiBzdHJva2U9IiNlODUwOWEiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPiA8cG9seWdvbiBwb2ludHM9IjMwMi41NSwyNDQuODggMzM5LjM1LDIyMy42MiAzMzkuMzUsMjY2LjEyIDMwMi41NSwyODcuMzgiIGZpbGw9IiNlODUwOWEiIHN0cm9rZT0iI2U4NTA5YSIgc3Ryb2tlLXdpZHRoPSI1IiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+IDxwb2x5Z29uIHBvaW50cz0iMzAyLjU1LDI5NC44OCAzMzkuMzUsMjczLjYyIDMzOS4zNSwzMTYuMTIgMzAyLjU1LDMzNy4zOCIgZmlsbD0iI2U4NTA5YSIgc3Ryb2tlPSIjZTg1MDlhIiBzdHJva2Utd2lkdGg9IjUiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4gPHBvbHlnb24gcG9pbnRzPSIzMDIuNTUsMzQ0Ljg4IDMzOS4zNSwzMjMuNjIgMzM5LjM1LDM2Ni4xMiAzMDIuNTUsMzg3LjM4IiBmaWxsPSIjZTg1MDlhIiBzdHJva2U9IiNlODUwOWEiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPiA8cG9seWdvbiBwb2ludHM9IjM0NS44NSwyMTkuODggMzgyLjY2LDE5OC42MiAzODIuNjYsMjQxLjEyIDM0NS44NSwyNjIuMzgiIGZpbGw9IiNlODUwOWEiIHN0cm9rZT0iI2U4NTA5YSIgc3Ryb2tlLXdpZHRoPSI1IiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+IDxwb2x5Z29uIHBvaW50cz0iMzQ1Ljg1LDI2OS44OCAzODIuNjYsMjQ4LjYyIDM4Mi42NiwyOTEuMTIgMzQ1Ljg1LDMxMi4zOCIgZmlsbD0iI2U4NTA5YSIgc3Ryb2tlPSIjZTg1MDlhIiBzdHJva2Utd2lkdGg9IjUiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4gPHBvbHlnb24gcG9pbnRzPSIzNDUuODUsMzE5Ljg4IDM4Mi42NiwyOTguNjIgMzgyLjY2LDM0MS4xMiAzNDUuODUsMzYyLjM4IiBmaWxsPSIjZTg1MDlhIiBzdHJva2U9IiNlODUwOWEiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPiA8L3N2Zz4=">
+<title>CFOP Alg Lab</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap">
 </head>
 <body>
-<!-- Cubest. Smart cube protocol code follows csTimer (github.com/cs0x7f/cstimer, GPL-3.0). -->
+<!-- CFOP Alg Lab. Smart cube protocol code follows csTimer (github.com/cs0x7f/cstimer, GPL-3.0). -->
 <style>
 /* Layout: sticky tab bar over a card grid; diagrams are the hero, algorithms set in mono. */
 :root {
@@ -47,7 +41,10 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line) }
 .bar { max-width: 1180px; margin: 0 auto; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
 .brand { display: flex; align-items: center; gap: 10px; font-family: var(--f-display); font-weight: 700; font-size: 17px; letter-spacing: -.01em }
-.logo { width: 30px; height: 30px; border-radius: 8px; display: block }
+.logo { display: grid; grid-template-columns: repeat(3, 7px); gap: 1.5px; padding: 2.5px; background: var(--body); border-radius: 4px }
+.logo i { width: 7px; height: 7px; border-radius: 1.5px; background: var(--cY) }
+.logo i:nth-child(2), .logo i:nth-child(4) { background: var(--cO) }
+.logo i:nth-child(9) { background: var(--cG) }
 .tabs { display: flex; gap: 4px; margin-left: auto; overflow-x: auto }
 .cbtoggle { border: 1px solid var(--line); background: none; border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 600; color: var(--muted); white-space: nowrap }
 .hdr-tools { display: flex; gap: 6px; flex-wrap: wrap }
@@ -517,7 +514,7 @@ button, a, .rb-s, [data-case-open] { touch-action: manipulation; -webkit-tap-hig
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important } }
 </style>
 <header><div class="bar">
-  <div class="brand"><img class="logo" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj4gPGRlZnM+PHJhZGlhbEdyYWRpZW50IGlkPSJiZyIgY3g9IjUwJSIgY3k9IjM4JSIgcj0iNzUlIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMyYTJmM2EiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMxMjE0MTgiLz48L3JhZGlhbEdyYWRpZW50PiA8bGluZWFyR3JhZGllbnQgaWQ9InJpbmciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNmZjlhNTIiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiNlMjU3MGIiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz4gPHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIHJ4PSIxMTIiIGZpbGw9InVybCgjYmcpIi8+IDxwb2x5Z29uIHBvaW50cz0iMzg1LjkwLDE5My4wMCAyNTYuMDAsMTE4LjAwIDEyNi4xMCwxOTMuMDAgMTI2LjEwLDM0My4wMCAyNTYuMDAsNDE4LjAwIDM4NS45MCwzNDMuMDAiIGZpbGw9IiMwNzA4MGEiIHN0cm9rZT0iIzA3MDgwYSIgc3Ryb2tlLXdpZHRoPSIyMiIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPiA8cG9seWdvbiBwb2ludHM9IjI1Ni4wMCwyNjQuMjUgMjkyLjgxLDI0My4wMCAyNTYuMDAsMjIxLjc1IDIxOS4xOSwyNDMuMDAiIGZpbGw9IiNmZmUxNGEiIHN0cm9rZT0iI2ZmZTE0YSIgc3Ryb2tlLXdpZHRoPSI1IiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+IDxwb2x5Z29uIHBvaW50cz0iMjEyLjcwLDIzOS4yNSAyNDkuNTAsMjE4LjAwIDIxMi43MCwxOTYuNzUgMTc1Ljg5LDIxOC4wMCIgZmlsbD0iI2ZmZTE0YSIgc3Ryb2tlPSIjZmZlMTRhIiBzdHJva2Utd2lkdGg9IjUiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4gPHBvbHlnb24gcG9pbnRzPSIxNjkuNDAsMjE0LjI1IDIwNi4yMCwxOTMuMDAgMTY5LjQwLDE3MS43NSAxMzIuNTksMTkzLjAwIiBmaWxsPSIjZmZlMTRhIiBzdHJva2U9IiNmZmUxNGEiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPiA8cG9seWdvbiBwb2ludHM9IjI5OS4zMCwyMzkuMjUgMzM2LjExLDIxOC4wMCAyOTkuMzAsMTk2Ljc1IDI2Mi41MCwyMTguMDAiIGZpbGw9IiNmZmUxNGEiIHN0cm9rZT0iI2ZmZTE0YSIgc3Ryb2tlLXdpZHRoPSI1IiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+IDxwb2x5Z29uIHBvaW50cz0iMjU2LjAwLDIxNC4yNSAyOTIuODEsMTkzLjAwIDI1Ni4wMCwxNzEuNzUgMjE5LjE5LDE5My4wMCIgZmlsbD0iI2ZmZTE0YSIgc3Ryb2tlPSIjZmZlMTRhIiBzdHJva2Utd2lkdGg9IjUiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4gPHBvbHlnb24gcG9pbnRzPSIyMTIuNzAsMTg5LjI1IDI0OS41MCwxNjguMDAgMjEyLjcwLDE0Ni43NSAxNzUuODksMTY4LjAwIiBmaWxsPSIjZmZlMTRhIiBzdHJva2U9IiNmZmUxNGEiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPiA8cG9seWdvbiBwb2ludHM9IjM0Mi42MCwyMTQuMjUgMzc5LjQxLDE5My4wMCAzNDIuNjAsMTcxLjc1IDMwNS44MCwxOTMuMDAiIGZpbGw9IiNmZmUxNGEiIHN0cm9rZT0iI2ZmZTE0YSIgc3Ryb2tlLXdpZHRoPSI1IiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+IDxwb2x5Z29uIHBvaW50cz0iMjk5LjMwLDE4OS4yNSAzMzYuMTEsMTY4LjAwIDI5OS4zMCwxNDYuNzUgMjYyLjUwLDE2OC4wMCIgZmlsbD0iI2ZmZTE0YSIgc3Ryb2tlPSIjZmZlMTRhIiBzdHJva2Utd2lkdGg9IjUiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4gPHBvbHlnb24gcG9pbnRzPSIyNTYuMDAsMTY0LjI1IDI5Mi44MSwxNDMuMDAgMjU2LjAwLDEyMS43NSAyMTkuMTksMTQzLjAwIiBmaWxsPSIjZmZlMTRhIiBzdHJva2U9IiNmZmUxNGEiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPiA8cG9seWdvbiBwb2ludHM9IjI1Mi43NSwyNjkuODggMjE1Ljk1LDI0OC42MiAyMTUuOTUsMjkxLjEyIDI1Mi43NSwzMTIuMzgiIGZpbGw9IiMyZjZmZTQiIHN0cm9rZT0iIzJmNmZlNCIgc3Ryb2tlLXdpZHRoPSI1IiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+IDxwb2x5Z29uIHBvaW50cz0iMjUyLjc1LDMxOS44OCAyMTUuOTUsMjk4LjYyIDIxNS45NSwzNDEuMTIgMjUyLjc1LDM2Mi4zOCIgZmlsbD0iIzJmNmZlNCIgc3Ryb2tlPSIjMmY2ZmU0IiBzdHJva2Utd2lkdGg9IjUiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4gPHBvbHlnb24gcG9pbnRzPSIyNTIuNzUsMzY5Ljg4IDIxNS45NSwzNDguNjIgMjE1Ljk1LDM5MS4xMiAyNTIuNzUsNDEyLjM4IiBmaWxsPSIjMmY2ZmU0IiBzdHJva2U9IiMyZjZmZTQiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPiA8cG9seWdvbiBwb2ludHM9IjIwOS40NSwyNDQuODggMTcyLjY1LDIyMy42MiAxNzIuNjUsMjY2LjEyIDIwOS40NSwyODcuMzgiIGZpbGw9IiMyZjZmZTQiIHN0cm9rZT0iIzJmNmZlNCIgc3Ryb2tlLXdpZHRoPSI1IiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+IDxwb2x5Z29uIHBvaW50cz0iMjA5LjQ1LDI5NC44OCAxNzIuNjUsMjczLjYyIDE3Mi42NSwzMTYuMTIgMjA5LjQ1LDMzNy4zOCIgZmlsbD0iIzJmNmZlNCIgc3Ryb2tlPSIjMmY2ZmU0IiBzdHJva2Utd2lkdGg9IjUiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4gPHBvbHlnb24gcG9pbnRzPSIyMDkuNDUsMzQ0Ljg4IDE3Mi42NSwzMjMuNjIgMTcyLjY1LDM2Ni4xMiAyMDkuNDUsMzg3LjM4IiBmaWxsPSIjMmY2ZmU0IiBzdHJva2U9IiMyZjZmZTQiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPiA8cG9seWdvbiBwb2ludHM9IjE2Ni4xNSwyMTkuODggMTI5LjM0LDE5OC42MiAxMjkuMzQsMjQxLjEyIDE2Ni4xNSwyNjIuMzgiIGZpbGw9IiMyZjZmZTQiIHN0cm9rZT0iIzJmNmZlNCIgc3Ryb2tlLXdpZHRoPSI1IiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+IDxwb2x5Z29uIHBvaW50cz0iMTY2LjE1LDI2OS44OCAxMjkuMzQsMjQ4LjYyIDEyOS4zNCwyOTEuMTIgMTY2LjE1LDMxMi4zOCIgZmlsbD0iIzJmNmZlNCIgc3Ryb2tlPSIjMmY2ZmU0IiBzdHJva2Utd2lkdGg9IjUiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4gPHBvbHlnb24gcG9pbnRzPSIxNjYuMTUsMzE5Ljg4IDEyOS4zNCwyOTguNjIgMTI5LjM0LDM0MS4xMiAxNjYuMTUsMzYyLjM4IiBmaWxsPSIjMmY2ZmU0IiBzdHJva2U9IiMyZjZmZTQiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPiA8cG9seWdvbiBwb2ludHM9IjI1OS4yNSwyNjkuODggMjk2LjA1LDI0OC42MiAyOTYuMDUsMjkxLjEyIDI1OS4yNSwzMTIuMzgiIGZpbGw9IiNlODUwOWEiIHN0cm9rZT0iI2U4NTA5YSIgc3Ryb2tlLXdpZHRoPSI1IiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+IDxwb2x5Z29uIHBvaW50cz0iMjU5LjI1LDMxOS44OCAyOTYuMDUsMjk4LjYyIDI5Ni4wNSwzNDEuMTIgMjU5LjI1LDM2Mi4zOCIgZmlsbD0iI2U4NTA5YSIgc3Ryb2tlPSIjZTg1MDlhIiBzdHJva2Utd2lkdGg9IjUiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4gPHBvbHlnb24gcG9pbnRzPSIyNTkuMjUsMzY5Ljg4IDI5Ni4wNSwzNDguNjIgMjk2LjA1LDM5MS4xMiAyNTkuMjUsNDEyLjM4IiBmaWxsPSIjZTg1MDlhIiBzdHJva2U9IiNlODUwOWEiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPiA8cG9seWdvbiBwb2ludHM9IjMwMi41NSwyNDQuODggMzM5LjM1LDIyMy42MiAzMzkuMzUsMjY2LjEyIDMwMi41NSwyODcuMzgiIGZpbGw9IiNlODUwOWEiIHN0cm9rZT0iI2U4NTA5YSIgc3Ryb2tlLXdpZHRoPSI1IiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+IDxwb2x5Z29uIHBvaW50cz0iMzAyLjU1LDI5NC44OCAzMzkuMzUsMjczLjYyIDMzOS4zNSwzMTYuMTIgMzAyLjU1LDMzNy4zOCIgZmlsbD0iI2U4NTA5YSIgc3Ryb2tlPSIjZTg1MDlhIiBzdHJva2Utd2lkdGg9IjUiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4gPHBvbHlnb24gcG9pbnRzPSIzMDIuNTUsMzQ0Ljg4IDMzOS4zNSwzMjMuNjIgMzM5LjM1LDM2Ni4xMiAzMDIuNTUsMzg3LjM4IiBmaWxsPSIjZTg1MDlhIiBzdHJva2U9IiNlODUwOWEiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPiA8cG9seWdvbiBwb2ludHM9IjM0NS44NSwyMTkuODggMzgyLjY2LDE5OC42MiAzODIuNjYsMjQxLjEyIDM0NS44NSwyNjIuMzgiIGZpbGw9IiNlODUwOWEiIHN0cm9rZT0iI2U4NTA5YSIgc3Ryb2tlLXdpZHRoPSI1IiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+IDxwb2x5Z29uIHBvaW50cz0iMzQ1Ljg1LDI2OS44OCAzODIuNjYsMjQ4LjYyIDM4Mi42NiwyOTEuMTIgMzQ1Ljg1LDMxMi4zOCIgZmlsbD0iI2U4NTA5YSIgc3Ryb2tlPSIjZTg1MDlhIiBzdHJva2Utd2lkdGg9IjUiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4gPHBvbHlnb24gcG9pbnRzPSIzNDUuODUsMzE5Ljg4IDM4Mi42NiwyOTguNjIgMzgyLjY2LDM0MS4xMiAzNDUuODUsMzYyLjM4IiBmaWxsPSIjZTg1MDlhIiBzdHJva2U9IiNlODUwOWEiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPiA8L3N2Zz4=" alt="" width="30" height="30">Cubest</div>
+  <div class="brand"><span class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>CFOP Alg Lab</div>
   <nav class="tabs"><a href="#pll" data-v="pll">PLL</a><a href="#oll" data-v="oll">OLL</a><a href="#f2l" data-v="f2l">F2L</a><a href="#train" data-v="train"><span class="long">Trainer</span><span class="short">Train</span></a><a href="#smart" data-v="smart"><span class="long">Smart cube</span><span class="short">Cube</span></a><a href="#timer" data-v="timer">Timer</a><a href="#help" data-v="help">Help</a></nav>
   <div class="hdr-tools">
     <div class="popwrap"><button class="cubepill" id="cubepill" data-cubepill aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M7 7l10 10-5 5V2l5 5L7 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Connect</span></button>
@@ -528,7 +525,6 @@ button, a, .rb-s, [data-case-open] { touch-action: manipulation; -webkit-tap-hig
           <button class="seg" data-theme-set="auto">Auto</button><button class="seg" data-theme-set="dark">Dark</button><button class="seg" data-theme-set="light">Light</button></div>
         <p class="pop-h">Colourblind letters</p><button class="cbtoggle" id="cbtoggle" data-cb aria-pressed="true">Colourblind: on</button>
         <p class="pop-h">Screen</p><button class="cbtoggle" id="waketoggle" data-wake aria-pressed="true">Keep awake while connected: on</button>
-        <div id="installwrap" hidden><p class="pop-h">App</p><button class="primary small" id="installbtn" data-install>Install Cubest</button></div>
       </div></div>
   </div>
 </div></header>
@@ -3469,44 +3465,6 @@ const Detect = (() => {
 })();
 // Detect;
 
-// Self-healing tracking: smart cubes report their own idea of the state (QiYi with every move, MoYu on request).
-// The app's state can differ from the cube's because you pressed "Mark as solved" (the cube still thinks it is
-// scrambled), but both change by the same turns, so app = C ∘ cube for a fixed relabelling C of the stickers.
-// We learn C when you sync, then whenever a report disagrees with our tracking (a lost or garbled Bluetooth
-// message), we rebuild our state from the report.
-const CubeSync = (() => {
-  // Kociemba facelet indices (URFDLB, 9 each) of each corner and edge
-  const CF = [[8, 9, 20], [6, 18, 38], [0, 36, 47], [2, 45, 11], [29, 26, 15], [27, 44, 24], [33, 53, 42], [35, 17, 51]];
-  const EF = [[5, 10], [7, 19], [3, 37], [1, 46], [32, 16], [28, 25], [30, 43], [34, 52], [23, 12], [21, 41], [50, 39], [48, 14]];
-  const home = i => 'URFDLB'[Math.floor(i / 9)]; // colour that belongs at facelet i
-  // facelet string -> perm[pos] = home facelet of the sticker now at pos (null if the string isn't a real cube)
-  function perm(f) {
-    if (!f || f.length !== 54) return null;
-    const p = new Array(54).fill(-1);
-    for (const c of [4, 13, 22, 31, 40, 49]) { if (f[c] !== home(c)) return null; p[c] = c; }
-    for (const [slots, n] of [[CF, 3], [EF, 2]]) {
-      for (const at of slots) {
-        const cols = at.map(i => f[i]);
-        const piece = slots.find(h => h.map(home).slice().sort().join('') === cols.slice().sort().join(''));
-        if (!piece) return null;
-        for (let k = 0; k < n; k++) { const hk = piece.find(h => home(h) === cols[k]); p[at[k]] = hk; }
-      }
-    }
-    return new Set(p).size === 54 && !p.includes(-1) ? p : null;
-  }
-  const toString = p => p.map(home).join('');
-  // C such that app = C ∘ cube, from one moment where both are known
-  function correction(cubeF, appF) {
-    const a = perm(cubeF), b = perm(appF); if (!a || !b) return null;
-    const C = new Array(54); for (let i = 0; i < 54; i++) C[a[i]] = b[i];
-    return C;
-  }
-  // what the app's state should be, given a fresh report from the cube
-  function apply(C, cubeF) { const a = perm(cubeF); if (!a || !C) return null; return toString(a.map(h => C[h])); }
-  return { perm, correction, apply, toString };
-})();
-// CubeSync;
-
 // Smart cube drivers. Protocol details follow csTimer (github.com/cs0x7f/cstimer, GPL-3.0).
 // Supports MoYu WeiLong AI ("WCU_MY32_xxxx") and QiYi / XMD Tornado V4 AI ("QY-QYSC-…", "XMD-TornadoV4-i-…").
 const SmartCube = (() => {
@@ -3638,7 +3596,7 @@ const SmartCube = (() => {
   }
 
   // ---------- connection ----------
-  let device = null, chrRead = null, chrWrite = null, kind = null, codec = null, prevCnt = -1, handlers = {}, mySend = null, myTimer = 0, myLastMove = 0, myLastAsk = 0;
+  let device = null, chrRead = null, chrWrite = null, kind = null, codec = null, prevCnt = -1, handlers = {};
   const emit = (ev, d) => handlers[ev] && handlers[ev](d);
   const supported = () => typeof navigator !== 'undefined' && !!navigator.bluetooth;
   const macKey = n => 'cfop-mac-' + n;
@@ -3686,9 +3644,6 @@ const SmartCube = (() => {
       await chrRead.startNotifications();
       const send = async r => chrWrite.writeValue(new Uint8Array(codec.encode(r)));
       for (const op of [161, 163, 164]) { const r = new Array(20).fill(0); r[0] = op; await send(r); }
-      // ask for the cube's own state now and then while it's still, so lost Bluetooth messages get corrected
-      mySend = send; clearInterval(myTimer);
-      myTimer = setInterval(() => { const now = performance.now(); if (!device || !device.gatt.connected) return clearInterval(myTimer); if (now - myLastMove > 700 && now - myLastAsk > 2500) myAsk(); }, 500);
       const g = new Array(20).fill(0); g[0] = 172; g[2] = 1; await send(g); // turn on gyro notifications
     } else {
       const svc = await gatt.getPrimaryService(QY.SERVICE);
@@ -3701,21 +3656,20 @@ const SmartCube = (() => {
     return { name, mac, kind };
   }
   let badCount = 0;
-  function myAsk() { if (!mySend) return; myLastAsk = performance.now(); const r = new Array(20).fill(0); r[0] = 163; mySend(r).catch(() => {}); }
   function onMoyu(raw, name, mac) {
     const ev = myParse(codec.decode(raw));
     if (ev.type === 'unknown') { if (++badCount >= 3) emit('badMac', { name, mac }); return; }
     badCount = 0; saveMac(name, mac);
-    if (ev.type === 'facelets') { if (prevCnt === -1) { prevCnt = ev.moveCnt; emit('facelets', ev.facelets); } else if (ev.moveCnt === prevCnt) emit('report', ev.facelets); }
+    if (ev.type === 'facelets') { if (prevCnt === -1) { prevCnt = ev.moveCnt; emit('facelets', ev.facelets); } }
     else if (ev.type === 'battery') emit('battery', ev.level);
     else if (ev.type === 'gyro') emit('gyro', ev.q);
     else if (ev.type === 'moves') {
       if (prevCnt === -1 || ev.moveCnt === prevCnt) return;
-      const diff = (ev.moveCnt - prevCnt) & 0xff; prevCnt = ev.moveCnt; myLastMove = performance.now();
-      // the packet only remembers the last 5 turns: if more were missed, use what we have and ask the cube for its state
-      const ms = ev.moves.slice(0, Math.min(diff, 5)).reverse().filter(m => m != null);
-      if (ms.length) emit('moves', ms);
-      if (diff > 5 || ms.length < Math.min(diff, 5)) { emit('lost', diff); setTimeout(myAsk, 300); }
+      let diff = (ev.moveCnt - prevCnt) & 0xff; prevCnt = ev.moveCnt;
+      diff = Math.min(diff, 5);
+      const ms = ev.moves.slice(0, diff).reverse();
+      if (ms.some(m => m == null)) return;
+      emit('moves', ms);
     }
   }
   let qyLastTs = -1;
@@ -3748,9 +3702,8 @@ const SmartCube = (() => {
     qyLastTs = ts;
     const moves = todo.reverse().map(([v]) => qyMove(v)).filter(Boolean);
     if (moves.length) emit('moves', moves);
-    emit('report', qyParseFacelet(msg.slice(7, 34))); // the cube's own state after these turns
   }
-  async function disconnect() { clearInterval(myTimer); mySend = null; try { device && device.gatt.connected && device.gatt.disconnect(); } catch (e) {} device = null; }
+  async function disconnect() { try { device && device.gatt.connected && device.gatt.disconnect(); } catch (e) {} device = null; }
   const on = (ev, fn) => { handlers[ev] = fn; };
   const forgetMac = n => { try { localStorage.removeItem(macKey(n)); } catch (e) {} };
 
@@ -4040,7 +3993,7 @@ function liveHTML() {
     }
   }
   return `<div class="live">
-    <div class="livecube">${cubeSlot('sm')}<p class="cap">Last moves: <code>${esc(SM.moves.slice(-12).join(' ') || '—')}</code></p>${SM.resyncs ? `<p class="cap hint">Auto-corrected ${SM.resyncs} time${SM.resyncs === 1 ? '' : 's'} from the cube's own state (lost Bluetooth messages)</p>` : ''}
+    <div class="livecube">${cubeSlot('sm')}<p class="cap">Last moves: <code>${esc(SM.moves.slice(-12).join(' ') || '—')}</code></p>
       <div class="row cubectl">${G.live ? `<button class="ghost small" data-sm="view">Reset view</button>` : ''}${animControl()}</div></div>
     <div class="livecase"><span class="eyebrow">Detected</span><b class="big">${esc(label)}</b><div class="sub">${sub}</div><div class="livedia">${dia}</div></div>
   </div>`;
@@ -4088,7 +4041,7 @@ function renderSmart() {
   const conn = SM.conn === 'connected';
   let banner = '';
   if (!SmartCube.supported()) banner = `<aside class="note warn"><b>This browser can't use Bluetooth.</b> Use Chrome or Edge on Windows, Mac or Android. On iPhone or iPad, open the page in the free <b>Bluefy</b> browser app.</aside>`;
-  else if (inFrame) banner = `<aside class="note warn"><b>Bluetooth is blocked in this preview.</b> Pages inside Claude can't reach Bluetooth devices. Open the hosted copy of Cubest (the HTML file Claude sent you, put on Netlify) to connect your cube.</aside>`;
+  else if (inFrame) banner = `<aside class="note warn"><b>Bluetooth is blocked in this preview.</b> Pages inside Claude can't reach Bluetooth devices. Open the hosted copy of CFOP Alg Lab (the HTML file Claude sent you, put on Netlify) to connect your cube.</aside>`;
   return `<section class="intro"><div><h1>Smart cube</h1>
     <p class="helprow">${helpLink('connect', 'Connecting')}${helpLink('sync', 'Syncing')}${helpLink('gestures', 'U4 and D4')}</p></div></section>
     ${banner}
@@ -4131,7 +4084,7 @@ function openSync(mode) {
 function closeSync(action) {
   if (!SM.sync) return;
   if (action === 'solved') { animReset(); SM.st = Cube.solved(); SM.moves = []; }
-  SM.sync = null; SM.synced = true; relearnSync();
+  SM.sync = null; SM.synced = true;
   if (G.q) G.q0 = G.q; G.shown = Q.id();
   const el = document.getElementById('sm-modal'); el.hidden = true; el.innerHTML = '';
   onState();
@@ -4173,7 +4126,6 @@ SmartCube.on('status', s => {
 });
 SmartCube.on('battery', b => { if (b === SM.battery) return; SM.battery = b; try { updatePill(); } catch (e) {} if (SM.conn === 'connected' && $('#main').dataset.v === 'smart') rerender(); });
 SmartCube.on('facelets', f => {
-  SM.rawSt = Detect.fromFacelets(f);
   if (SM.synced) return; // after syncing, the app tracks turns itself
   animReset(); SM.st = Detect.fromFacelets(f); SM.moves = [];
   if (!SM.sync) openSync('reported'); else if (SM.sync.mode === 'unreported') openSync('reported');
@@ -4198,7 +4150,7 @@ SmartCube.on('moves', ms => {
   const now = performance.now();
   for (const m of ms) {
     _preHook();
-    Cube.apply(SM.st, m); if (SM.rawSt) Cube.apply(SM.rawSt, m); SM.moves.push(m); SM.moveTimes.push(now); SM.moveCount++; animPush(m, now);
+    Cube.apply(SM.st, m); SM.moves.push(m); SM.moveTimes.push(now); SM.moveCount++; animPush(m, now);
     if (!SM.sync) { timerOnMove(m, now); cmOnMove(m, now); }
     gesture = gestureFrom(m) || gesture;
   }
@@ -4211,7 +4163,7 @@ SmartCube.on('moves', ms => {
 });
 // One place for "the cube is solved now": used by D4 and the Mark as solved button.
 function markSolved() {
-  animReset(); SM.st = Cube.solved(); SM.moves = []; relearnSync();
+  animReset(); SM.st = Cube.solved(); SM.moves = [];
   if (SM.practice && SM.target && ['setup', 'ready', 'lost', 'needSolved', 'running'].includes(SM.phase)) { clearTimeout(SM.idle); SM.phase = 'setup'; }
   if (['scrambling', 'inspect', 'ready', 'running', 'needSolved', 'mismatch', 'idle'].includes(TM.phase) && TM.scramble) { cancelAnim(); startScramble(false); }
   cmAfterSolvedMark();
@@ -4232,18 +4184,6 @@ function handleGesture(g) {
   else if (G.q) { resetView(); toast('View reset'); }
   else toast('No gyro data from the cube yet, so there is no view to reset');
 }
-// ---- self-healing: compare our tracking with the cube's own reports (see cubesync.js)
-function relearnSync() { SM.C = SM.rawSt ? CubeSync.correction(Detect.toFacelets(SM.rawSt), Detect.toFacelets(SM.st)) : null; }
-SM.resyncs = 0; SM.lostMsgs = 0;
-SmartCube.on('report', f => {
-  SM.rawSt = Detect.fromFacelets(f);
-  if (!SM.synced || SM.sync || !SM.C) return;
-  const want = CubeSync.apply(SM.C, f); if (!want) return;
-  if (want === Detect.toFacelets(SM.st)) return;
-  SM.st = Detect.fromFacelets(want); SM.resyncs++; animReset();
-  onState();
-});
-SmartCube.on('lost', () => { SM.lostMsgs++; });
 SmartCube.on('needMac', ({ name }) => { SM.needMac = true; SM.macFor = name; SM.conn = 'idle'; SM.err = ''; if ($('#main').dataset.v !== 'smart') { location.hash = '#smart'; toast("Enter your cube's address to connect"); } rerenderSmart(); });
 SmartCube.on('badMac', ({ name }) => { SmartCube.forgetMac(name); SmartCube.disconnect(); SM.needMac = true; SM.conn = 'idle'; SM.err = "The saved address didn't work for this cube."; rerenderSmart(); });
 function rerenderSmart() { try { updatePill(); } catch (e) {} const v = $('#main').dataset.v; if (v === 'timer') timerOnState(); if (v === 'smart' || v === 'timer') rerender(); if (v === 'pll' || v === 'oll' || v === 'f2l') algUpdate(); }
@@ -5664,15 +5604,7 @@ const FAQ = [
       <ul><li><b>Android:</b> use Chrome. <b>iPhone or iPad:</b> Safari and Chrome can't use Bluetooth, so use the free Bluefy browser app.</li>
       <li>While your cube is connected, the screen stays awake so it doesn't dim mid-solve. You can turn this off in the settings menu (top right), under Screen.</li>
       <li>Your cube's saved address shows when you tap the cube button at the top. <b>Change</b> forgets it, so you can enter a new one next time you connect.</li>
-      <li>On Android you can install it as an app; see "How do I install Cubest?".</li></ul>` },
-    { id: 'install', q: 'How do I install Cubest?', a: `
-      <p>Open your Netlify address in <b>Chrome</b> (Android, Windows or Mac) or <b>Edge</b>, then tap the settings button (top right) and <b>Install Cubest</b>. If you don't see it, use the browser's own menu: <b>Install app</b> or <b>Add to Home screen</b>. Cubest then opens in its own window with its icon, works offline for learning and timing, and keeps all your solves.</p>
-      <ul><li><b>iPhone and iPad:</b> apps added to the home screen run on Safari's engine, which has no Bluetooth, so the cube wouldn't connect. Keep using Cubest in the Bluefy browser instead (you can bookmark it there).</li>
-      <li>When you upload a new version to Netlify, the installed app picks it up the next time you open it while online.</li>
-      <li>The AI coach needs the internet; everything else works offline.</li></ul>` },
-    { id: 'tracking', q: 'What if the app loses track of my cube?', a: `
-      <p>Bluetooth messages sometimes arrive late or get lost, especially on phones. The app checks itself against the cube's own state: the Tornado V4 sends it with every turn, and the WeiLong is asked for it whenever the cube is still. If they disagree, the app quietly corrects itself, and this still works after <b>Mark as solved</b>. The Smart cube tab shows how many times this has happened.</p>
-      <p>If it's still wrong, solve the cube and tap <b>Mark as solved</b> (or turn the yellow face four times, D4). Keeping the app open and on screen while you solve also helps, since phones slow down Bluetooth for background tabs.</p>` },
+      <li>Tip: add the page to your home screen so it opens like an app.</li></ul>` },
     { id: 'sync', q: 'What is the "Sync your cube" window?', a: `
       <p>Each time you connect, the app shows the state your cube reports, from the front and the back. Hold the cube with white on top and green facing you and check it matches.</p>
       <ul><li><b>That's correct</b> (or U4) keeps the cube's state. This also sets the starting angle of the 3D view.</li>
@@ -5754,7 +5686,7 @@ const FAQ = [
 ];
 let FAQ_OPEN = null;
 function renderHelp() {
-  return `<section class="intro"><div><h1>Help</h1><p>How everything in Cubest works.</p></div></section>
+  return `<section class="intro"><div><h1>Help</h1><p>How everything in CFOP Alg Lab works.</p></div></section>
     <div class="faq-search"><label for="faq-q" class="sr">Search help</label><input id="faq-q" type="search" placeholder="Search help, e.g. inspection, D4, sync" autocomplete="off"></div>
     <p class="hint" id="faq-none" hidden>No answers match. Try a shorter word.</p>
     ${FAQ.map(g => `<section class="faq-group" data-group><h2 class="gh">${esc(g.group)}</h2>
@@ -5837,17 +5769,6 @@ document.addEventListener('visibilitychange', wakeSync);
 setInterval(wakeSync, 2000);
 document.addEventListener('click', e => { if (!e.target.closest('[data-wake]')) return; WAKE.on = !WAKE.on; try { localStorage.setItem('cfop-lab-wake', WAKE.on ? '1' : '0'); } catch (err) {} wakeBtnSync(); wakeSync(); });
 wakeBtnSync();
-
-// ---- install as an app (Chrome / Edge on Android, Windows, Mac). The browser decides when it's allowed.
-let INSTALL = null;
-const installSync = () => { const w = document.getElementById('installwrap'); if (w) w.hidden = !INSTALL; };
-addEventListener('beforeinstallprompt', e => { e.preventDefault(); INSTALL = e; installSync(); });
-addEventListener('appinstalled', () => { INSTALL = null; installSync(); try { toast('Cubest installed. Open it from your home screen or app list'); } catch (e) {} });
-document.addEventListener('click', async e => {
-  if (!e.target.closest('[data-install]') || !INSTALL) return;
-  const ev = INSTALL; INSTALL = null; installSync(); try { closePops(); } catch (err) {}
-  ev.prompt(); try { await ev.userChoice; } catch (err) {}
-});
 
 </script>
 
