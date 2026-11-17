@@ -540,7 +540,7 @@ button, a, .rb-s, [data-case-open] { touch-action: manipulation; -webkit-tap-hig
         <p class="pop-h">Screen</p><button class="cbtoggle" id="waketoggle" data-wake aria-pressed="true">Keep awake while connected: on</button>
         <div id="installwrap" hidden><p class="pop-h">App</p><button class="primary small" id="installbtn" data-install>Install Cubest</button></div>
         <p class="pop-h">Troubleshooting</p><button class="ghost small" data-sm="copylog">Copy Bluetooth log</button>
-        <p class="hint appver">Version 2026-11-17 15:58</p>
+        <p class="hint appver">Version 2026-11-17 20:34</p>
       </div></div>
   </div>
 </div></header>
@@ -3520,7 +3520,7 @@ const CubeSync = (() => {
 // CubeSync;
 
 // Smart cube drivers. Protocol details follow csTimer (github.com/cs0x7f/cstimer, GPL-3.0).
-// Supports MoYu WeiLong AI ("WCU_MY32_xxxx") and QiYi / XMD Tornado V4 AI ("QY-QYSC-…", "XMD-TornadoV4-i-…").
+// Supports MoYu WeiLong AI ("WCU_MY32_xxxx"), QiYi / XMD Tornado V4 AI ("QY-QYSC-…", "XMD-TornadoV4-i-…") and GAN cubes ("GAN…", Gen2/3/4 protocols).
 const SmartCube = (() => {
   const aesBlock = key => new aesjs.AES(key);
   function crc16modbus(data) {
@@ -3562,8 +3562,8 @@ const SmartCube = (() => {
     guesses: name => /^WCU_MY32_[0-9A-F]{4}$/.test(name) ? ['00', '02', '01', '03'].map(b => `CF:30:16:${b}:${name.slice(9, 11)}:${name.slice(11, 13)}`) : [],
     macFromAdv: dv => { const m = []; for (let i = 0; i < 6; i++) m.push(dv.getUint8(dv.byteLength - i - 1).toString(16).padStart(2, '0')); return m.join(':'); },
   };
-  function myCodec(mac) {
-    const v = macBytes(mac), key = MY.KEY.slice(), iv = MY.IV.slice();
+  function myCodec(mac, K = MY.KEY, IV = MY.IV) {
+    const v = macBytes(mac), key = K.slice(), iv = IV.slice();
     for (let i = 0; i < 6; i++) { key[i] = (key[i] + v[5 - i]) % 255; iv[i] = (iv[i] + v[5 - i]) % 255; }
     const aes = aesBlock(key);
     return {
@@ -3625,6 +3625,80 @@ const SmartCube = (() => {
     }
     return { type: 'unknown', code: t };
   }
+
+  // ---------- GAN (Gen2 / Gen3 / Gen4 protocols; same encryption scheme as the WeiLong, GAN's own key) ----------
+  // Service IDs and key as published in gan-web-bluetooth and csTimer.
+  const GAN = {
+    KEY: [1, 2, 66, 40, 49, 145, 22, 7, 32, 5, 24, 84, 66, 17, 18, 83],
+    IV: [17, 3, 50, 40, 33, 1, 118, 39, 32, 149, 120, 20, 50, 18, 2, 67],
+    GEN: {
+      gen4: { SERVICE: '00000010-0000-fff7-fff6-fff5fff4fff0', CMD: '0000fff5-0000-1000-8000-00805f9b34fb', STATE: '0000fff6-0000-1000-8000-00805f9b34fb' },
+      gen3: { SERVICE: '8653000a-43e6-47b7-9cb0-5fc21d4ae340', CMD: '8653000c-43e6-47b7-9cb0-5fc21d4ae340', STATE: '8653000b-43e6-47b7-9cb0-5fc21d4ae340' },
+      gen2: { SERVICE: '6e400001-b5a3-f393-e0a9-e50e24dc4179', CMD: '28be4a4a-cd67-11e9-a32f-2a2ae2dbcce4', STATE: '28be4cb6-cd67-11e9-a32f-2a2ae2dbcce4' },
+    },
+    CICS: Array.from({ length: 256 }, (_, i) => (i << 8) | 0x01),
+    defaultMac: () => null,
+    guesses: () => [],
+    macFromAdv: dv => { const m = []; for (let i = 1; i <= 6; i++) m.push(dv.getUint8(dv.byteLength - i).toString(16).padStart(2, '0')); return m.join(':'); },
+  };
+  // bit reader: n bits from bit position `at`; 16 and 32-bit words can be little-endian
+  function ganWord(v, at, n, le) {
+    if (n <= 8) return parseInt(v.slice(at, at + n), 2);
+    const by = []; for (let i = 0; i < n / 8; i++) by.push(parseInt(v.slice(at + i * 8, at + i * 8 + 8), 2));
+    if (le) by.reverse();
+    return by.reduce((a, b) => a * 256 + b, 0);
+  }
+  const ganQ = x => (1 - (x >> 15) * 2) * (x & 0x7fff) / 0x7fff;
+  const CFM = [[8, 9, 20], [6, 18, 38], [0, 36, 47], [2, 45, 11], [29, 26, 15], [27, 44, 24], [33, 53, 42], [35, 17, 51]];
+  const EFM = [[5, 10], [7, 19], [3, 37], [1, 46], [32, 16], [28, 25], [30, 43], [34, 52], [23, 12], [21, 41], [50, 39], [48, 14]];
+  // cube state from piece permutation/orientation (7 corners and 11 edges are sent; the last ones follow)
+  function ganFacelets(v, cpAt, coAt, epAt, eoAt) {
+    const cp = [], co = [], ep = [], eo = [];
+    for (let i = 0; i < 7; i++) { cp.push(ganWord(v, cpAt + i * 3, 3)); co.push(ganWord(v, coAt + i * 2, 2)); }
+    for (let i = 0; i < 11; i++) { ep.push(ganWord(v, epAt + i * 4, 4)); eo.push(ganWord(v, eoAt + i, 1)); }
+    cp.push(28 - cp.reduce((a, b) => a + b, 0)); co.push((3 - co.reduce((a, b) => a + b, 0) % 3) % 3);
+    ep.push(66 - ep.reduce((a, b) => a + b, 0)); eo.push((2 - eo.reduce((a, b) => a + b, 0) % 2) % 2);
+    if (cp.some(x => x < 0 || x > 7) || ep.some(x => x < 0 || x > 11)) return null;
+    const F = 'URFDLB', f = Array.from({ length: 54 }, (_, i) => F[Math.floor(i / 9)]);
+    for (let i = 0; i < 8; i++) for (let p = 0; p < 3; p++) f[CFM[i][(p + co[i]) % 3]] = F[Math.floor(CFM[cp[i]][p] / 9)];
+    for (let i = 0; i < 12; i++) for (let p = 0; p < 2; p++) f[EFM[i][(p + eo[i]) % 2]] = F[Math.floor(EFM[ep[i]][p] / 9)];
+    return f.join('');
+  }
+  const GAN_FACE = [2, 32, 8, 1, 16, 4];   // gen3/gen4 face bit -> URFDLB index
+  // returns {type, ...}; `serial` lets us notice missed turns
+  function ganParse(gen, dec) {
+    const v = bits(Array.from(dec));
+    if (gen === 'gen4') {
+      const t = ganWord(v, 0, 8), len = ganWord(v, 8, 8);
+      if (t === 0x01) { const f = GAN_FACE.indexOf(ganWord(v, 66, 6)); return f < 0 ? { type: 'unknown', code: t } : { type: 'move', serial: ganWord(v, 48, 16, true), move: 'URFDLB'[f] + (ganWord(v, 64, 2) ? "'" : '') }; }
+      if (t === 0xed) return { type: 'facelets', serial: ganWord(v, 16, 16, true), facelets: ganFacelets(v, 32, 53, 69, 113) };
+      if (t === 0xec) return { type: 'gyro', q: normQ({ w: ganQ(ganWord(v, 16, 16)), x: ganQ(ganWord(v, 32, 16)), y: ganQ(ganWord(v, 48, 16)), z: ganQ(ganWord(v, 64, 16)) }) };
+      if (t === 0xef) return { type: 'battery', level: ganWord(v, 8 + len * 8, 8) };
+      if ([0xd1, 0xf5, 0xf6, 0xfa, 0xfc, 0xfd, 0xfe, 0xff, 0xea].includes(t)) return { type: 'other', code: t };
+      return { type: 'unknown', code: t };
+    }
+    if (gen === 'gen3') {
+      if (ganWord(v, 0, 8) !== 0x55) return { type: 'unknown', code: ganWord(v, 0, 8) };
+      const t = ganWord(v, 8, 8);
+      if (t === 0x01) { const f = GAN_FACE.indexOf(ganWord(v, 74, 6)); return f < 0 ? { type: 'unknown', code: t } : { type: 'move', serial: ganWord(v, 56, 16, true), move: 'URFDLB'[f] + (ganWord(v, 72, 2) ? "'" : '') }; }
+      if (t === 0x02) return { type: 'facelets', serial: ganWord(v, 24, 16, true), facelets: ganFacelets(v, 40, 61, 77, 121) };
+      if (t === 0x10) return { type: 'battery', level: ganWord(v, 24, 8) };
+      return { type: 'other', code: t };
+    }
+    // gen2
+    const t = ganWord(v, 0, 4);
+    if (t === 0x01) return { type: 'gyro', q: normQ({ w: ganQ(ganWord(v, 4, 16)), x: ganQ(ganWord(v, 20, 16)), y: ganQ(ganWord(v, 36, 16)), z: ganQ(ganWord(v, 52, 16)) }) };
+    if (t === 0x02) { const moves = []; for (let i = 0; i < 7; i++) { const f = ganWord(v, 12 + 5 * i, 4); moves.push(f < 6 ? 'URFDLB'[f] + (ganWord(v, 16 + 5 * i, 1) ? "'" : '') : null); } return { type: 'moves2', serial: ganWord(v, 4, 8), moves }; }
+    if (t === 0x04) return { type: 'facelets', serial: ganWord(v, 4, 8), facelets: ganFacelets(v, 12, 33, 47, 91) };
+    if (t === 0x09) return { type: 'battery', level: ganWord(v, 8, 8) };
+    if ([0x05, 0x0d].includes(t)) return { type: 'other', code: t };
+    return { type: 'unknown', code: t };
+  }
+  const ganCmd = (gen, what) => {
+    if (gen === 'gen4') { const r = new Array(20).fill(0); if (what === 'facelets') r.splice(0, 4, 0xdd, 0x04, 0x00, 0xed); else if (what === 'battery') r.splice(0, 4, 0xdd, 0x04, 0x00, 0xef); else r.splice(0, 2, 0xdf, 0x03); return r; }
+    if (gen === 'gen3') { const r = new Array(16).fill(0); r[0] = 0x68; r[1] = what === 'facelets' ? 0x01 : what === 'battery' ? 0x07 : 0x04; return r; }
+    const r = new Array(20).fill(0); r[0] = what === 'facelets' ? 4 : what === 'battery' ? 9 : 5; return r;
+  };
 
   // ---------- QiYi / XMD Tornado V4 AI ----------
   const QY = {
@@ -3694,14 +3768,14 @@ const SmartCube = (() => {
   async function connect(macOverride) {
     if (!supported()) throw new Error('no-bluetooth');
     device = await navigator.bluetooth.requestDevice({
-      filters: [{ namePrefix: 'WCU_MY3' }, { namePrefix: 'QY-QYSC' }, { namePrefix: 'XMD-TornadoV4-i' }],
-      optionalServices: [MY.SERVICE, QY.SERVICE],
-      optionalManufacturerData: [...MY.CICS, ...QY.CICS],
+      filters: [{ namePrefix: 'WCU_MY3' }, { namePrefix: 'QY-QYSC' }, { namePrefix: 'XMD-TornadoV4-i' }, { namePrefix: 'GAN' }, { namePrefix: 'MG' }, { namePrefix: 'AiCube' }],
+      optionalServices: [MY.SERVICE, QY.SERVICE, GAN.GEN.gen4.SERVICE, GAN.GEN.gen3.SERVICE, GAN.GEN.gen2.SERVICE],
+      optionalManufacturerData: [...new Set([...MY.CICS, ...QY.CICS, ...GAN.CICS])],
     });
     const name = (device.name || '').trim();
     LOG.length = 0; logT0 = performance.now(); log(`picked ${name} · ${navigator.userAgent}`);
-    kind = name.startsWith('WCU_MY3') ? 'moyu' : 'qiyi';
-    const model = kind === 'moyu' ? MY : QY;
+    kind = name.startsWith('WCU_MY3') ? 'moyu' : /^(GAN|MG|AiCube)/.test(name) ? 'gan' : 'qiyi';
+    const model = kind === 'moyu' ? MY : kind === 'gan' ? GAN : QY;
     emit('status', { state: 'connecting', name });
     let mac = macOverride || loadMac(name), macSrc = macOverride ? 'typed' : mac ? 'saved' : '';
     if (!mac) { mac = await advMac(device, model); if (mac) macSrc = 'advertisement'; }
@@ -3710,7 +3784,30 @@ const SmartCube = (() => {
     if (!mac || !MAC_RE.test(mac)) { emit('needMac', { name }); throw new Error('need-mac'); }
     device.addEventListener('gattserverdisconnected', () => { log('disconnected'); emit('status', { state: 'disconnected', name }); });
     const gatt = await device.gatt.connect(); log('gatt connected');
-    if (kind === 'moyu') {
+    if (kind === 'gan') {
+      let gen = null, svc = null;
+      for (const g of ['gen4', 'gen3', 'gen2']) { try { svc = await gatt.getPrimaryService(GAN.GEN[g].SERVICE); gen = g; break; } catch (e) {} }
+      if (!gen) { log('no known GAN service found'); try { const all = await gatt.getPrimaryServices(); log('services: ' + all.map(x => x.uuid).join(', ')); } catch (e) { log('listing services: ' + (e && e.message)); } throw new Error('GAN cube protocol not recognised'); }
+      log(`GAN protocol ${gen}`); ganGen = gen;
+      chrRead = await svc.getCharacteristic(GAN.GEN[gen].STATE); chrWrite = await svc.getCharacteristic(GAN.GEN[gen].CMD);
+      log(`read chr [${props(chrRead)}] · write chr [${props(chrWrite)}]`);
+      const K = name.startsWith('AiCube') ? [5, 18, 2, 69, 2, 1, 41, 86, 18, 120, 18, 118, 129, 1, 8, 3] : GAN.KEY, IV = name.startsWith('AiCube') ? [1, 68, 40, 6, 134, 33, 34, 40, 81, 5, 8, 49, 130, 2, 33, 6] : GAN.IV;
+      codec = myCodec(mac, K, IV); myMac = mac; ganSerial = -1; ganInit = false; myNotes = 0; myTypes = {}; myGot = false; badCount = 0;
+      chrRead.addEventListener('characteristicvaluechanged', ev => onGan(bytes(ev.target.value), name, myMac));
+      await chrRead.startNotifications(); log('notifications on');
+      await sleep(300);
+      const send = async r => { if (!(await gattWrite(chrWrite, new Uint8Array(codec.encode(r)), `${r[0].toString(16)}/${(r[1] || 0).toString(16)}`))) throw new Error('write failed'); };
+      mySend = send;
+      await send(ganCmd(gen, 'facelets')).catch(() => {}); await sleep(80);
+      await send(ganCmd(gen, 'battery')).catch(() => {}); await sleep(80);
+      await send(ganCmd(gen, 'hardware')).catch(() => {});
+      const devR = device;
+      setTimeout(async () => { if (device === devR && device.gatt.connected && !myGot) { log('no answer yet, asking again'); await send(ganCmd(gen, 'facelets')).catch(() => {}); } }, 1200);
+      setTimeout(() => { if (device === devR && device.gatt.connected && !myGot) { log(`silent: ${myNotes} notifications, none decoded`); emit('badMac', { name, mac, silent: true }); } }, 3500);
+      clearInterval(myTimer);
+      myTimer = setInterval(() => { const now = performance.now(); if (!device || !device.gatt.connected) return clearInterval(myTimer); if (now - myLastMove > 700 && now - myLastAsk > 2500) myAsk(); }, 500);
+      setTimeout(() => { if (device === devR && device.gatt.connected) send(ganCmd(gen, 'battery')).catch(() => {}); }, 60000);
+    } else if (kind === 'moyu') {
       const svc = await gatt.getPrimaryService(MY.SERVICE); log('service found');
       chrRead = await svc.getCharacteristic(MY.READ);
       chrWrite = await svc.getCharacteristic(MY.WRITE);
@@ -3756,7 +3853,44 @@ const SmartCube = (() => {
     return { name, mac, kind };
   }
   let badCount = 0, myGot = false, myNotes = 0, myTypes = {}, myMac = '';
-  function myAsk() { if (!mySend || !device || !device.gatt.connected) return; myLastAsk = performance.now(); const r = new Array(20).fill(0); r[0] = 163; mySend(r).catch(() => {}); }
+  function myAsk() { if (!mySend || !device || !device.gatt.connected) return; myLastAsk = performance.now(); if (kind === 'gan') { mySend(ganCmd(ganGen, 'facelets')).catch(() => {}); return; } const r = new Array(20).fill(0); r[0] = 163; mySend(r).catch(() => {}); }
+  let ganGen = null, ganSerial = -1, ganInit = false;
+  function onGan(raw, name, mac) {
+    const dec = codec.decode(raw), ev = ganParse(ganGen, dec);
+    myNotes++; myTypes[ev.type] = (myTypes[ev.type] || 0) + 1;
+    if (myNotes <= 8 || (ev.type === 'unknown' && myTypes.unknown <= 6) || (ev.type === 'other' && myTypes.other <= 4)) log(`notify #${myNotes} len ${raw.length} → ${ev.type}${ev.code != null ? ' 0x' + ev.code.toString(16) : ''}${ev.move ? ' ' + ev.move : ''}${ev.serial != null ? ' #' + ev.serial : ''} (decoded ${hex(dec).slice(0, 24)})`);
+    if (myNotes === 60 || myNotes % 500 === 0) log('notify counts ' + JSON.stringify(myTypes));
+    if (ev.type === 'unknown') { if (!myGot && ++badCount >= 4) emit('badMac', { name, mac }); return; }
+    if (ev.type === 'other') return;
+    if (ev.type === 'facelets' && !ev.facelets) { log('facelets packet did not decode to a valid cube'); if (!myGot && ++badCount >= 4) emit('badMac', { name, mac }); return; }
+    if (!myGot) { log(`first answer (${ev.type}) with address ${mac}`); emit('mac', mac); }
+    badCount = 0; myGot = true; saveMac(name, mac);
+    if (ev.type === 'battery') { if (ev.level >= 0 && ev.level <= 100) emit('battery', ev.level); return; }
+    if (ev.type === 'gyro') { emit('gyro', ev.q); return; }
+    if (ev.type === 'facelets') {
+      if (!ganInit) { ganInit = true; ganSerial = ev.serial; emit('facelets', ev.facelets); }
+      else if (ev.serial === ganSerial) emit('report', ev.facelets);
+      return;
+    }
+    const mask = ganGen === 'gen2' ? 0xff : 0xffff;
+    if (ev.type === 'move') {
+      myLastMove = performance.now();
+      if (!ganInit) return;
+      const diff = ganSerial < 0 ? 1 : (ev.serial - ganSerial) & mask;
+      if (diff === 0) return;
+      ganSerial = ev.serial; emit('moves', [ev.move]);
+      if (diff > 1) { emit('lost', diff - 1); setTimeout(myAsk, 300); }
+      return;
+    }
+    if (ev.type === 'moves2') {
+      myLastMove = performance.now();
+      if (!ganInit) return;
+      const diff = (ev.serial - ganSerial) & mask; if (diff === 0) return;
+      const ms = ev.moves.slice(0, Math.min(diff, 7)).reverse().filter(Boolean);
+      ganSerial = ev.serial; if (ms.length) emit('moves', ms);
+      if (diff > 7) { emit('lost', diff - 7); setTimeout(myAsk, 300); }
+    }
+  }
   function onMoyu(raw, name, mac) {
     const dec = codec.decode(raw), ev = myParse(dec);
     myNotes++; myTypes[ev.type] = (myTypes[ev.type] || 0) + 1;
@@ -3814,7 +3948,7 @@ const SmartCube = (() => {
   const forgetMac = n => { try { localStorage.removeItem(macKey(n)); } catch (e) {} };
 
   return { connect, disconnect, on, supported, forgetMac, MAC_RE, log, getLog: () => LOG.slice(),
-    _test: { myCodec, myParse, myParseFacelet, qyEncrypt, qyDecrypt, qyParse, qyParseFacelet, crc16modbus, MY, QY } };
+    _test: { ganParse, ganCmd, ganFacelets, ganWord, GAN, myCodec, myParse, myParseFacelet, qyEncrypt, qyDecrypt, qyParse, qyParseFacelet, crc16modbus, MY, QY } };
 })();
 // SmartCube;
 
@@ -5823,7 +5957,7 @@ const FAQ = [
   ] },
   { group: 'Smart cube', items: [
     { id: 'connect', q: 'Which cubes and browsers work?', a: `
-      <p>The MoYu WeiLong AI and the XMD Tornado V4 AI. Use Chrome or Edge on Windows, Mac or Android. On iPhone or iPad, use the free Bluefy browser app.</p>
+      <p>The MoYu WeiLong AI, the XMD Tornado V4 AI and the GAN i4. Other GAN smart cubes (GAN12 ui, i Carry, i3 and similar) should work too but haven't been tested. GAN cubes need their address the first time on a phone: you'll find it in GAN's Cube Station app or acubemy. Use Chrome or Edge on Windows, Mac or Android. On iPhone or iPad, use the free Bluefy browser app.</p>
       <p>Bluetooth doesn't work inside Claude's preview of this app. Open your hosted copy (the one on Netlify) to connect.</p>
       <p>To connect, turn a face to wake the cube, tap <b>Connect</b> at the top right of any page, and pick it from the list. Once connected, that button shows your cube and battery; tap it for Mark as solved, Reset view, turn animation and Disconnect. If the app asks for the cube's address, you can find it in csTimer's Bluetooth log or in the WCU or QiYi app.</p>` },
     { id: 'phone', q: 'Does it work on my phone?', a: `
@@ -5949,7 +6083,7 @@ if (location.hash === '#help') route();
 
 // ---------- Top-bar cube button and settings menu ----------
 const BT_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M7 7l10 10-5 5V2l5 5L7 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-const shortCube = n => /^WCU_MY/.test(n) ? 'WeiLong AI' : /TornadoV4/i.test(n) ? 'Tornado V4' : /^QY-QYSC/.test(n) ? 'QiYi' : n;
+const shortCube = n => /^WCU_MY/.test(n) ? 'WeiLong AI' : /TornadoV4/i.test(n) ? 'Tornado V4' : /^QY-QYSC/.test(n) ? 'QiYi' : /^GANi4/i.test(n) ? 'GAN i4' : /^GAN/.test(n) ? 'GAN' : n;
 function updatePill() {
   const b = document.getElementById('cubepill'); if (!b) return;
   if (SM.conn === 'connected') b.innerHTML = `<span class="dot connected"></span><span class="pname">${esc(shortCube(SM.name))}</span>${SM.battery != null ? `<span class="pbat">${SM.battery}%</span>` : ''}`;
