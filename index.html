@@ -422,16 +422,12 @@ code { font-family: var(--f-mono); font-size: .92em }
 .tm-abort { min-height: 44px; display: flex; justify-content: center; align-items: center; margin-top: 6px }
 .tm-abort .hint { opacity: .55; font-size: 12.5px }
 .tm-abortbtn { min-width: 160px; border-color: var(--accent); color: var(--accent); font-weight: 700 }
-body.tm-focusing #main { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none }
 .mzone { cursor: pointer; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; border-radius: 16px }
 #tm-clock.holding { color: var(--muted) } #tm-clock.armed, .armedtxt { color: #2f6fe4 }
 :root[data-theme="dark"] #tm-clock.armed, :root[data-theme="dark"] .armedtxt { color: #5b9bff }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) #tm-clock.armed, :root:not([data-theme="light"]) .armedtxt { color: #5b9bff } }
 .tm-status kbd { font-family: var(--f-mono); font-size: .9em; padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; background: var(--surface) }
 #main.tm-focusing .tm-focus:has(.mzone) { min-height: 70vh; justify-content: center }
-.machow { margin: 4px 0 10px; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; font-size: 14px } .macerr { color: var(--ink); font-weight: 600 }
-.btlog { margin-top: 24px; border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px } .btlog summary { cursor: pointer; font-weight: 600; color: var(--muted) }
-.btlog pre { max-height: 260px; overflow: auto; font-size: 11px; line-height: 1.45; background: var(--bg); padding: 8px; border-radius: 8px; white-space: pre-wrap; word-break: break-all; margin: 8px 0 0 }
 .nocase { text-transform: none; letter-spacing: 0 }
 .ai-raw { white-space: pre-wrap; margin: 0 } .ai-by { margin: 0 }
 .lt-actions { margin-top: 10px; justify-content: flex-start }
@@ -3529,22 +3525,6 @@ const SmartCube = (() => {
   const bytes = dv => { const r = []; for (let i = 0; i < dv.byteLength; i++) r.push(dv.getUint8(i)); return r; };
   const macBytes = mac => mac.split(':').map(h => parseInt(h, 16));
   const MAC_RE = /^([0-9A-F]{2}:){5}[0-9A-F]{2}$/i;
-  // ---- Bluetooth log, to diagnose problems on devices we can't test on
-  const LOG = []; let logT0 = performance.now();
-  const hex = a => Array.from(a, x => x.toString(16).padStart(2, '0')).join('');
-  function log(msg) { LOG.push(((performance.now() - logT0) / 1000).toFixed(2).padStart(7) + 's  ' + msg); if (LOG.length > 300) LOG.splice(0, LOG.length - 300); }
-  const sleep = ms => new Promise(r => setTimeout(r, ms));
-  const props = c => { try { const p = c.properties; return ['read', 'write', 'writeWithoutResponse', 'notify', 'indicate'].filter(k => p && p[k]).join(',') || '?'; } catch (e) { return '?'; } };
-  // write the way the characteristic says it wants; retry once (phones often refuse a write while busy)
-  async function gattWrite(chr, data, label) {
-    let mode = 'writeValue';
-    try { const p = chr.properties; if (p && p.writeWithoutResponse && chr.writeValueWithoutResponse) mode = 'writeValueWithoutResponse'; else if (p && p.write && chr.writeValueWithResponse) mode = 'writeValueWithResponse'; } catch (e) {}
-    for (let k = 0; k < 2; k++) {
-      try { await chr[mode](data); log(`write ${label} ok (${mode})`); return true; }
-      catch (e) { log(`write ${label} failed (${mode}): ${e && e.message}`); await sleep(150); }
-    }
-    return false;
-  }
 
   // ---------- MoYu WeiLong AI (MY32) ----------
   const MY = {
@@ -3694,58 +3674,44 @@ const SmartCube = (() => {
       optionalManufacturerData: [...MY.CICS, ...QY.CICS],
     });
     const name = (device.name || '').trim();
-    LOG.length = 0; logT0 = performance.now(); log(`picked ${name} · ${navigator.userAgent}`);
     kind = name.startsWith('WCU_MY3') ? 'moyu' : 'qiyi';
     const model = kind === 'moyu' ? MY : QY;
     emit('status', { state: 'connecting', name });
-    let mac = macOverride || loadMac(name), macSrc = macOverride ? 'typed' : mac ? 'saved' : '';
-    if (!mac) { mac = await advMac(device, model); if (mac) macSrc = 'advertisement'; }
-    if (!mac) { mac = model.defaultMac(name); if (mac) macSrc = 'guessed from name'; }
-    log(`address ${mac || 'none'} (${macSrc || 'unknown'})`);
+    let mac = macOverride || loadMac(name);
+    if (!mac) mac = await advMac(device, model);
+    if (!mac) mac = model.defaultMac(name);
     if (!mac || !MAC_RE.test(mac)) { emit('needMac', { name }); throw new Error('need-mac'); }
-    device.addEventListener('gattserverdisconnected', () => { log('disconnected'); emit('status', { state: 'disconnected', name }); });
-    const gatt = await device.gatt.connect(); log('gatt connected');
+    device.addEventListener('gattserverdisconnected', () => emit('status', { state: 'disconnected', name }));
+    const gatt = await device.gatt.connect();
     if (kind === 'moyu') {
-      const svc = await gatt.getPrimaryService(MY.SERVICE); log('service found');
+      const svc = await gatt.getPrimaryService(MY.SERVICE);
       chrRead = await svc.getCharacteristic(MY.READ);
       chrWrite = await svc.getCharacteristic(MY.WRITE);
-      log(`read chr [${props(chrRead)}] · write chr [${props(chrWrite)}]`);
-      codec = myCodec(mac); prevCnt = -1; myNotes = 0; myTypes = {}; myGot = false; badCount = 0;
+      codec = myCodec(mac); prevCnt = -1;
       chrRead.addEventListener('characteristicvaluechanged', ev => onMoyu(bytes(ev.target.value), name, mac));
-      await chrRead.startNotifications(); log('notifications on');
-      await sleep(300);   // phones need a moment after enabling notifications before the cube hears requests
-      const send = async r => { if (!(await gattWrite(chrWrite, new Uint8Array(codec.encode(r)), 'op ' + r[0]))) throw new Error('write failed'); };
-      const hello = async () => { for (const op of [161, 163, 164]) { const r = new Array(20).fill(0); r[0] = op; await send(r).catch(() => {}); await sleep(60); } const g = new Array(20).fill(0); g[0] = 172; g[2] = 1; await send(g).catch(() => {}); };
-      await hello();
-      // resend the requests if the cube hasn't answered yet
-      const devR = device; setTimeout(async () => { if (device === devR && device.gatt.connected && !myGot) { log('no answer yet, sending requests again'); await hello(); } }, 1200);
+      await chrRead.startNotifications();
+      const send = async r => chrWrite.writeValue(new Uint8Array(codec.encode(r)));
+      for (const op of [161, 163, 164]) { const r = new Array(20).fill(0); r[0] = op; await send(r); }
       // ask for the cube's own state now and then while it's still, so lost Bluetooth messages get corrected
       mySend = send; clearInterval(myTimer);
       myTimer = setInterval(() => { const now = performance.now(); if (!device || !device.gatt.connected) return clearInterval(myTimer); if (now - myLastMove > 700 && now - myLastAsk > 2500) myAsk(); }, 500);
-      // The cube only answers requests encrypted with its own address. Silence after connecting means the
-      // address is wrong (phones can't read it, so we may have guessed it from the name).
-      const dev0 = device;
-      setTimeout(() => { if (device === dev0 && device.gatt.connected && !myGot) { log(`silent: ${myNotes} notifications, none decoded`); emit('badMac', { name, mac, silent: true }); } }, 3500);
+      const g = new Array(20).fill(0); g[0] = 172; g[2] = 1; await send(g); // turn on gyro notifications
     } else {
       const svc = await gatt.getPrimaryService(QY.SERVICE);
       chrRead = chrWrite = await svc.getCharacteristic(QY.CHR);
-      log(`chr [${props(chrRead)}]`);
       chrRead.addEventListener('characteristicvaluechanged', ev => onQiyi(bytes(ev.target.value), name, mac));
-      await chrRead.startNotifications(); log('notifications on');
-      await chrWrite.writeValue(new Uint8Array(qyEncrypt(qyHello(mac)))); log('hello sent');
+      await chrRead.startNotifications();
+      await chrWrite.writeValue(new Uint8Array(qyEncrypt(qyHello(mac))));
     }
     emit('status', { state: 'connected', name, mac, kind });
     return { name, mac, kind };
   }
-  let badCount = 0, myGot = false, myNotes = 0, myTypes = {};
+  let badCount = 0;
   function myAsk() { if (!mySend) return; myLastAsk = performance.now(); const r = new Array(20).fill(0); r[0] = 163; mySend(r).catch(() => {}); }
   function onMoyu(raw, name, mac) {
-    const dec = codec.decode(raw), ev = myParse(dec);
-    myNotes++; myTypes[ev.type] = (myTypes[ev.type] || 0) + 1;
-    if (myNotes <= 6 || (ev.type === 'unknown' && myTypes.unknown <= 5)) log(`notify #${myNotes} len ${raw.length} raw ${hex(raw).slice(0, 40)} → ${ev.type} (decoded ${hex(dec).slice(0, 12)})`);
-    if (myNotes === 50 || myNotes % 500 === 0) log('notify counts ' + JSON.stringify(myTypes));
+    const ev = myParse(codec.decode(raw));
     if (ev.type === 'unknown') { if (++badCount >= 3) emit('badMac', { name, mac }); return; }
-    badCount = 0; myGot = true; saveMac(name, mac);
+    badCount = 0; saveMac(name, mac);
     if (ev.type === 'facelets') { if (prevCnt === -1) { prevCnt = ev.moveCnt; emit('facelets', ev.facelets); } else if (ev.moveCnt === prevCnt) emit('report', ev.facelets); }
     else if (ev.type === 'battery') emit('battery', ev.level);
     else if (ev.type === 'gyro') emit('gyro', ev.q);
@@ -3794,7 +3760,7 @@ const SmartCube = (() => {
   const on = (ev, fn) => { handlers[ev] = fn; };
   const forgetMac = n => { try { localStorage.removeItem(macKey(n)); } catch (e) {} };
 
-  return { connect, disconnect, on, supported, forgetMac, MAC_RE, log, getLog: () => LOG.slice(),
+  return { connect, disconnect, on, supported, forgetMac, MAC_RE,
     _test: { myCodec, myParse, myParseFacelet, qyEncrypt, qyDecrypt, qyParse, qyParseFacelet, crc16modbus, MY, QY } };
 })();
 // SmartCube;
@@ -4138,21 +4104,12 @@ function renderSmart() {
         <span>${conn ? (SM.battery != null ? 'Battery ' + SM.battery + '%' : 'Connected') : esc(SM.err || 'Turn a face to wake the cube, then connect.')}</span></div>
       <div class="row">${conn ? `<button class="ghost" data-sm="solved">Mark as solved</button><button class="ghost" data-sm="disconnect">Disconnect</button>` : `<button class="primary" data-sm="connect">Connect cube</button>`}</div>
     </div>
-    ${SM.needMac ? `<div class="macbox"><label for="sm-mac"><b>Your cube's address is needed</b></label>
-      ${SM.err ? `<p class="macerr">${esc(SM.err)}${SM.triedMac ? ` It tried <code>${esc(SM.triedMac)}</code>.` : ''}</p>` : ''}
-      <p>Smart cubes encrypt their messages with their Bluetooth address, and phones can't read it automatically. Where to find it:</p>
-      <ul class="machow"><li><b>Easiest:</b> on a computer where the cube already works in Cubest, connect it and click the cube button at the top. The address is shown there (e.g. <code>CF:30:16:00:12:34</code>).</li>
-      <li><b>Android:</b> the free <b>nRF Connect</b> app lists nearby devices with their address. Look for ${esc(SM.macFor || 'your cube')} (turn the cube first to wake it).</li>
-      <li>The official MoYu / QiYi app or csTimer's Bluetooth log may also show it. iPhones hide addresses, so on iPhone use one of the other ways.</li></ul>
-      <div class="row"><input id="sm-mac" placeholder="AA:BB:CC:DD:EE:FF" autocomplete="off" spellcheck="false" value="${esc(SM.triedMac || '')}"><button class="primary" data-sm="mac">Connect with this address</button></div>
-      ${SmartCube.getLog().length ? `<p class="hint">Sure the address is right? <button class="linkbtn" data-sm="copylog">Copy the Bluetooth log</button> and share it, so the problem can be tracked down.</p>` : ''}</div>` : ''}
+    ${SM.needMac ? `<div class="macbox"><label for="sm-mac"><b>Cube MAC address needed</b></label>
+      <p>Your browser didn't share it automatically. Find it in csTimer's Bluetooth log or the WCU / QiYi app, e.g. <code>CF:30:16:00:12:34</code>.</p>
+      <div class="row"><input id="sm-mac" placeholder="AA:BB:CC:DD:EE:FF" autocomplete="off" spellcheck="false"><button class="primary" data-sm="mac">Connect with this address</button></div></div>` : ''}
     <div id="sm-live">${liveHTML()}</div>
     <h2 class="gh">Practice</h2>
-    <div id="sm-practice">${practiceHTML()}</div>
-    <details class="btlog"><summary>Bluetooth log (for troubleshooting)</summary>
-      <p class="hint">If your cube misbehaves, connect it, wait a few seconds, then copy this and send it along.</p>
-      <div class="row"><button class="ghost small" data-sm="copylog">Copy log</button><button class="ghost small" data-sm="showlog">Refresh</button></div>
-      <pre id="btlog-pre">${esc(SmartCube.getLog().join('\n') || 'Nothing yet. Connect a cube first.')}</pre></details>`;
+    <div id="sm-practice">${practiceHTML()}</div>`;
 }
 views.smart = renderSmart;
 const smUpdate = () => { if ($('#main').dataset.v !== 'smart') return; const l = $('#sm-live'), p = $('#sm-practice'); if (l) l.innerHTML = liveHTML(); if (p) p.innerHTML = practiceHTML(); };
@@ -4212,7 +4169,7 @@ function onState() {
 }
 SmartCube.on('status', s => {
   SM.conn = s.state; SM.name = s.name || SM.name;
-  if (s.state === 'disconnected') { if (!SM.needMac) SM.err = 'Cube disconnected. Connect again to continue.'; clearTimeout(SM.syncTimer); if (SM.sync) { SM.sync = null; const el = document.getElementById('sm-modal'); el.hidden = true; el.innerHTML = ''; } }
+  if (s.state === 'disconnected') { SM.err = 'Cube disconnected. Connect again to continue.'; clearTimeout(SM.syncTimer); if (SM.sync) { SM.sync = null; const el = document.getElementById('sm-modal'); el.hidden = true; el.innerHTML = ''; } }
   if (s.state === 'connected') {
     SM.mac = s.mac || ''; SM.needMac = false; SM.err = ''; SM.synced = false; G.q = null; G.q0 = null; G.live = false; G.shown = Q.id(); G.buf = [];
     clearTimeout(SM.syncTimer); SM.syncTimer = setTimeout(() => { if (!SM.sync && !SM.synced && SM.conn === 'connected') openSync('unreported'); }, 3500);
@@ -4294,19 +4251,14 @@ SmartCube.on('report', f => {
 });
 SmartCube.on('lost', () => { SM.lostMsgs++; });
 SmartCube.on('needMac', ({ name }) => { SM.needMac = true; SM.macFor = name; SM.conn = 'idle'; SM.err = ''; if ($('#main').dataset.v !== 'smart') { location.hash = '#smart'; toast("Enter your cube's address to connect"); } rerenderSmart(); });
-SmartCube.on('badMac', ({ name, mac, silent }) => {
-  SmartCube.forgetMac(name); SmartCube.disconnect(); SM.needMac = true; SM.macFor = name; SM.triedMac = mac || ''; SM.conn = 'idle';
-  SM.err = silent ? "The cube connected but isn't answering. Usually that means the address is wrong." : "The saved address didn't work for this cube.";
-  if ($('#main').dataset.v !== 'smart') { location.hash = '#smart'; toast("Your cube needs its address. See the Smart cube tab"); }
-  rerenderSmart();
-});
+SmartCube.on('badMac', ({ name }) => { SmartCube.forgetMac(name); SmartCube.disconnect(); SM.needMac = true; SM.conn = 'idle'; SM.err = "The saved address didn't work for this cube."; rerenderSmart(); });
 function rerenderSmart() { try { updatePill(); } catch (e) {} const v = $('#main').dataset.v; if (v === 'timer') timerOnState(); if (v === 'smart' || v === 'timer') rerender(); if (v === 'pll' || v === 'oll' || v === 'f2l') algUpdate(); }
 
 async function doConnect(mac) {
   SM.err = ''; SM.conn = 'connecting'; rerenderSmart();
   try { await SmartCube.connect(mac); }
   catch (e) {
-    const msg = String(e && (e.message || e)); SmartCube.log('connect error: ' + msg);
+    const msg = String(e && (e.message || e));
     if (msg === 'need-mac') return;
     SM.conn = 'idle';
     SM.err = /NotFoundError|cancel/i.test(msg) ? 'No cube picked. Turn a face to wake it and try again.'
@@ -4319,10 +4271,6 @@ document.addEventListener('click', e => {
   const t = e.target.closest('button'); if (!t) return;
   const a = t.dataset.sm;
   if (a === 'connect') doConnect();
-  else if (a === 'copylog' || a === 'showlog') {
-    const txt = SmartCube.getLog().join('\n') || 'empty'; const pre = document.getElementById('btlog-pre'); if (pre) pre.textContent = txt;
-    if (a === 'copylog') { const d = document.querySelector('.btlog'); if (d) d.open = true; navigator.clipboard.writeText(txt).then(() => toast('Bluetooth log copied'), () => toast('Copy failed. Select the text in the log instead')); }
-  }
   else if (a === 'mac') { const v = ($('#sm-mac').value || '').trim().toUpperCase(); if (!SmartCube.MAC_RE.test(v)) { SM.err = 'That address should look like AA:BB:CC:DD:EE:FF.'; rerenderSmart(); return; } doConnect(v); }
   else if (a === 'forgetmac') { const n = SM.name; SmartCube.forgetMac(n); SmartCube.disconnect(); SM.conn = 'idle'; SM.mac = ''; SM.err = ''; try { closePops(); } catch (e) {} rerenderSmart(); toast('Address cleared. Connect again to enter a new one'); }
   else if (a === 'disconnect') { SmartCube.disconnect(); SM.conn = 'idle'; SM.err = ''; rerenderSmart(); }
@@ -4650,7 +4598,7 @@ function resultHTML() {
   return `<div class="tm-result">
     ${L.manual ? '' : `<div class="tm-result-bg" aria-hidden="true">${cubeSlot('tm')}</div>`}
     <div class="tm-result-fg">
-      <div id="tm-clock" class="clock ${SM.conn === 'connected' ? '' : 'mzone'}">${L.pen === 'DNF' ? 'DNF' : fmtS(solveTime(L)) + (L.pen ? '+' : '')}</div>
+      <div id="tm-clock" class="clock">${L.pen === 'DNF' ? 'DNF' : fmtS(solveTime(L)) + (L.pen ? '+' : '')}</div>
       ${C && C.solve === L && (C.pb || C.avgs.length) ? `<div class="pbrow">${C.pb ? `<span class="pb">New PB!</span>${C.prev != null ? `<span class="pbprev">previous best ${fmtS(C.prev)}</span>` : ''}` : ''}${C.avgs.map(a => `<span class="pb small">New ${a} PB</span>`).join('')}</div>` : ''}
       <p class="tm-sub">${L.manual ? 'Timed manually' : ''}${turns ? `${(turns / (L.t / 1000)).toFixed(2)} TPS · ${turns} turns` : ''}${L.rot ? ` · ${L.rot.length} rotation${L.rot.length === 1 ? '' : 's'}` : ''}${rec != null ? ` · ${Math.round(rec * 100)}% recognition` : ''}</p>
       ${resultBarHTML(L)}
@@ -4833,29 +4781,17 @@ function focusStatus() {
   return TM.phase === 'inspect' ? 'Inspection. The timer starts on your first turn.' : TM.phase === 'ready' ? 'The timer starts on your first turn.' : '';
 }
 const manualOK = () => timerActive() && SM.conn !== 'connected' && !document.querySelector('.backdrop:not([hidden])');
-// While a finger or key is held, only recolour the time in place: rebuilding the page under a finger
-// detaches the touched element, and the phone then never reports the finger lifting.
-function mPaint() {
-  const c = document.getElementById('tm-clock'); if (!c) return;
-  c.classList.toggle('holding', TM.hold === 1); c.classList.toggle('armed', TM.hold === 2);
-  if (TM.hold && TM.phase !== 'inspect') c.textContent = '0.00';
-  const st = document.querySelector('.tm-focus .tm-status'); if (st) st.textContent = focusStatus();
-  const hint = document.querySelector('.tm-clock.mzone .tm-status');
-  if (hint && TM.phase !== 'inspect') { if (TM.hold) { hint.dataset.was ??= hint.innerHTML; hint.textContent = TM.hold === 2 ? 'Let go to start' : 'Keep holding…'; } else if (hint.dataset.was != null) { hint.innerHTML = hint.dataset.was; delete hint.dataset.was; } }
-}
 function mHoldStart() {
-  TM.hold = 1; clearTimeout(TM.holdT); mPaint();
-  TM.holdT = setTimeout(() => { if (TM.hold === 1) { TM.hold = 2; mPaint(); } }, 300);
+  TM.hold = 1; clearTimeout(TM.holdT);
+  TM.holdT = setTimeout(() => { if (TM.hold === 1) { TM.hold = 2; timerUpdate(); } }, 300);
 }
-function mCancelHold() { TM.hold = 0; TM.armInsp = false; clearTimeout(TM.holdT); mPaint(); if (TM.phase !== 'inspect') { const c = document.getElementById('tm-clock'); if (c) c.textContent = clockText(); } }
 function mDown(now) {
   if (TM.phase === 'running' && TM.manual) { mStop(now); TM.justStopped = true; return true; }
-  TM.justStopped = false;
   if (TM.phase === 'idle' || TM.phase === 'done') {
     if (TM.inspection) { TM.armInsp = true; return true; }   // inspection starts when you let go
-    mHoldStart(); return true;
+    TM.phase = 'ready'; TM.manual = true; TM.showResult = false; mHoldStart(); timerUpdate(); return true;
   }
-  if (TM.phase === 'inspect' && TM.manual) { mHoldStart(); return true; }
+  if (TM.phase === 'inspect' && TM.manual) { mHoldStart(); timerUpdate(); return true; }
   return false;
 }
 function mUp(now) {
@@ -4869,9 +4805,9 @@ function mUp(now) {
   if (armed) {
     const insp = TM.phase === 'inspect' ? (now - TM.inspectStart) / 1000 : 0;
     TM.penaltyInspect = insp > 17 ? 'DNF' : insp > 15 ? 2000 : 0;
-    TM.manual = true; TM.showResult = false; TM.phase = 'running'; TM.t0 = now; startTick(); timerUpdate(); window.scrollTo(0, 0);
-  } else mCancelHold();
-  return true;
+    TM.phase = 'running'; TM.t0 = now; startTick();
+  } else if (TM.phase === 'ready') TM.phase = 'idle';
+  timerUpdate(); return true;
 }
 function mStop(now) {
   TM.manual = false; TM.hold = 0;
@@ -4887,24 +4823,15 @@ document.addEventListener('keydown', e => {
   mDown(performance.now());
 });
 document.addEventListener('keyup', e => { if (e.code !== 'Space' || !manualOK() || typing(e)) return; e.preventDefault(); mUp(performance.now()); });
-// Where a touch or click counts: the time while waiting, the whole screen during inspection and the solve
-const NOT_ZONE = 'button, a, input, select, label, .pop, .modal, .tm-side, .rbar, .ai-mini';
-const mZone = t => !t.closest(NOT_ZONE) && (!!(TM.manual && ['inspect', 'running'].includes(TM.phase)) || !!t.closest('.mzone'));
-// touch: touch events with preventDefault stop long-press menus, text selection and scrolling from interrupting the hold
-document.addEventListener('touchstart', e => {
-  if (!manualOK() || e.touches.length > 1 || !mZone(e.target)) return;
-  if (mDown(performance.now())) e.preventDefault();
-}, { passive: false });
-const tUp = e => { if (manualOK() && (TM.hold || TM.armInsp || TM.justStopped)) { if (e.cancelable) e.preventDefault(); mUp(performance.now()); } };
-document.addEventListener('touchend', tUp, { passive: false });
-document.addEventListener('touchcancel', () => { if (TM.hold || TM.armInsp) mCancelHold(); TM.justStopped = false; });
-document.addEventListener('contextmenu', e => { if (manualOK() && mZone(e.target)) e.preventDefault(); });
-// mouse (and pen): pointer events
+// touch: the time is the button while waiting; during inspection and the solve, the whole screen is
 document.addEventListener('pointerdown', e => {
-  if (e.pointerType === 'touch' || !manualOK() || e.button > 0 || !mZone(e.target)) return;
+  if (!manualOK() || e.button > 0 || e.target.closest('button, a, input, select, label, .pop, .modal, .tm-side')) return;
+  const zone = (TM.manual && ['inspect', 'ready', 'running'].includes(TM.phase)) || e.target.closest('.tm-clock.mzone, .tm-result-fg > .clock');
+  if (!zone) return;
   if (mDown(performance.now())) e.preventDefault();
 });
-document.addEventListener('pointerup', e => { if (e.pointerType !== 'touch' && manualOK() && (TM.hold || TM.armInsp || TM.justStopped)) mUp(performance.now()); });
+const pUp = e => { if (manualOK() && (TM.hold || TM.armInsp || TM.justStopped)) { mUp(performance.now()); e.preventDefault(); } };
+document.addEventListener('pointerup', pUp); document.addEventListener('pointercancel', pUp);
 
 // ---- abort: tap anywhere during a solve to reveal the button (it hides again after a few seconds)
 const focusPhase = () => ['inspect', 'ready', 'running'].includes(TM.phase);
