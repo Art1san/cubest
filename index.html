@@ -432,6 +432,7 @@ body.tm-focusing #main { touch-action: none; -webkit-user-select: none; user-sel
 .machow { margin: 4px 0 10px; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; font-size: 14px } .macerr { color: var(--ink); font-weight: 600 }
 .btlog { margin-top: 24px; border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px } .btlog summary { cursor: pointer; font-weight: 600; color: var(--muted) }
 .btlog pre { max-height: 260px; overflow: auto; font-size: 11px; line-height: 1.45; background: var(--bg); padding: 8px; border-radius: 8px; white-space: pre-wrap; word-break: break-all; margin: 8px 0 0 }
+.exp-btns { display: flex; flex-direction: column; gap: 6px; align-items: stretch } .exp-btns button { text-align: left }
 .nocase { text-transform: none; letter-spacing: 0 }
 .ai-raw { white-space: pre-wrap; margin: 0 } .ai-by { margin: 0 }
 .lt-actions { margin-top: 10px; justify-content: flex-start }
@@ -539,8 +540,11 @@ button, a, .rb-s, [data-case-open] { touch-action: manipulation; -webkit-tap-hig
         <p class="pop-h">Colourblind letters</p><button class="cbtoggle" id="cbtoggle" data-cb aria-pressed="true">Colourblind: on</button>
         <p class="pop-h">Screen</p><button class="cbtoggle" id="waketoggle" data-wake aria-pressed="true">Keep awake while connected: on</button>
         <div id="installwrap" hidden><p class="pop-h">App</p><button class="primary small" id="installbtn" data-install>Install Cubest</button></div>
+        <p class="pop-h">Sessions</p>
+        <div class="exp-btns"><button class="ghost small" data-exp="csv">Export this session (CSV)</button><button class="ghost small" data-exp="one">Export this session (Cubest file)</button><button class="ghost small" data-exp="all">Back up all sessions</button><button class="ghost small" data-exp="import">Import a Cubest file</button></div>
+        <input type="file" id="imp-file" accept=".json,application/json" hidden>
         <p class="pop-h">Troubleshooting</p><button class="ghost small" data-sm="copylog">Copy Bluetooth log</button>
-        <p class="hint appver">Version 2026-11-17 20:34</p>
+        <p class="hint appver">Version 2026-11-17 20:41</p>
       </div></div>
   </div>
 </div></header>
@@ -5129,6 +5133,69 @@ document.addEventListener('submit', e => {
 });
 document.addEventListener('change', e => { if (e.target.id === 'tm-sess') { switchSession(e.target.value); timerUpdate(); } });
 
+// ---------- Export and import sessions
+function saveFile(name, text, mime) {
+  const blob = new Blob([text], { type: mime });
+  // inside Claude the page may not download directly; use the downloads capability when it's there
+  const viaClaude = window.claude && typeof window.claude.use === 'function'
+    ? window.claude.use('downloads').then(d => d ? d.save({ filename: name, data: blob }).then(() => true) : false).catch(() => false) : Promise.resolve(false);
+  viaClaude.then(ok => {
+    if (ok) return;
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  });
+}
+const fileSafe = s => String(s).replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') || 'session';
+const isoDay = () => new Date().toISOString().slice(0, 10);
+function sessionCSV(sess) {
+  const q = v => { const t = v == null ? '' : String(v); return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+  const sec = ms => ms == null ? '' : (ms / 1000).toFixed(2);
+  const rows = [['No.', 'Time', 'Penalty', 'Result', 'Date', 'Scramble', 'Cross', 'F2L', 'OLL', 'PLL', 'OLL case', 'PLL case', 'Turns', 'TPS', 'Rotations', 'Timed by']];
+  sess.solves.forEach((s, i) => {
+    const res = solveTime(s), a = s.a || {}, turns = s.mv ? s.mv.split(' ').filter(Boolean).length : '';
+    rows.push([i + 1, sec(s.t), s.pen === 'DNF' ? 'DNF' : s.pen ? '+2' : '', isFinite(res) ? sec(res) : 'DNF', new Date(s.d).toLocaleString(), s.scr || '',
+      sec(a.cross), sec(a.f2l), sec(a.oll), sec(a.pll), a.ollCase || '', a.pllCase || '', turns, turns && s.t ? (turns / (s.t / 1000)).toFixed(2) : '',
+      s.rot ? s.rot.length : '', s.manual ? 'hand' : s.cube || 'smart cube']);
+  });
+  return rows.map(r => r.map(q).join(',')).join('\r\n');
+}
+function exportSessions(kind) {
+  saveSolves();
+  if (kind === 'csv') { const s = curSess(); if (!s.solves.length) { toast('This session has no solves yet'); return; } saveFile(`cubest-${fileSafe(s.name)}-${isoDay()}.csv`, '﻿' + sessionCSV(s), 'text/csv'); return; }
+  const data = { app: 'Cubest', kind: 'sessions', version: 1, exported: new Date().toISOString(), sessions: kind === 'one' ? [curSess()] : SESS.list };
+  saveFile(kind === 'one' ? `cubest-${fileSafe(curSess().name)}-${isoDay()}.json` : `cubest-backup-${isoDay()}.json`, JSON.stringify(data), 'application/json');
+}
+// merge a backup in: new sessions are added, matching sessions gain any solves they don't already have
+function importSessions(text) {
+  let data; try { data = JSON.parse(text); } catch (e) { toast("That file isn't a Cubest backup"); return; }
+  const list = data && data.app === 'Cubest' && Array.isArray(data.sessions) ? data.sessions : null;
+  if (!list) { toast("That file isn't a Cubest backup"); return; }
+  let addedS = 0, addedT = 0;
+  for (const s of list) {
+    if (!s || !Array.isArray(s.solves)) continue;
+    const solves = s.solves.filter(x => x && typeof x.t === 'number' && typeof x.d === 'number');
+    let mine = SESS.list.find(x => x.id === s.id);
+    if (!mine) { mine = { id: SESS.list.some(x => x.id === s.id) || !s.id ? 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5) : s.id, name: s.name || 'Imported session', solves: [] }; SESS.list.push(mine); addedS++; }
+    const have = new Set(mine.solves.map(x => x.d + ':' + x.t));
+    for (const x of solves) if (!have.has(x.d + ':' + x.t)) { mine.solves.push(x); addedT++; }
+    mine.solves.sort((a, b) => a.d - b.d);
+  }
+  SOLVES = curSess().solves; saveSolves(); TM.last = SOLVES[SOLVES.length - 1] || null;
+  rerender();
+  toast(addedS || addedT ? `Imported ${addedT} solve${addedT === 1 ? '' : 's'}${addedS ? ` and ${addedS} new session${addedS === 1 ? '' : 's'}` : ''}` : 'Nothing new: all those solves were already here');
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-exp]'); if (!b) return;
+  const k = b.dataset.exp;
+  if (k === 'import') { const f = document.getElementById('imp-file'); if (f) { f.value = ''; f.click(); } return; }
+  try { closePops(); } catch (err) {}
+  exportSessions(k);
+});
+document.addEventListener('change', e => {
+  if (e.target.id !== 'imp-file' || !e.target.files || !e.target.files[0]) return;
+  const r = new FileReader(); r.onload = () => { try { closePops(); } catch (err) {} importSessions(String(r.result)); }; r.readAsText(e.target.files[0]);
+});
+
 // ---------- Analyse solve (reconstruction + step analysis) ----------
 const CNAME = { U: 'yellow', D: 'white', F: 'green', B: 'blue', R: 'orange', L: 'red' }; // app colour letters -> names
 const ROT24 = [];
@@ -6020,7 +6087,12 @@ const FAQ = [
       <li><b>Session:</b> best, ao5, ao12 and mean, plus stage averages over your last 12 solves.</li></ul>` },
     { id: 'sessions', q: 'How do sessions work?', a: `
       <p>Each session keeps its own solves and stats, so you can separate, say, warm-up from practice or one cube from another. Use the session box in the sidebar (or "Solves" at the top on a phone) to switch, start a <b>New</b> session, <b>Rename</b> it or <b>Delete</b> it. Delete and Clear session both ask you to tap twice.</p>
-      <p>Solves you timed before sessions existed are in "Default session".</p>` },
+      <p>Solves you timed before sessions existed are in "Default session". Delete is inside <b>Rename</b>.</p>
+      <p><b>Export and backup</b> (settings menu, top right, under Sessions):</p>
+      <ul><li><b>Export this session (CSV)</b>: a spreadsheet of every solve with time, penalty, date, scramble, stage times, cases, turns, TPS and rotations. Opens in Excel or Google Sheets.</li>
+      <li><b>Export this session (Cubest file)</b> or <b>Back up all sessions</b>: a full copy, including the turn-by-turn data the Analysis uses.</li>
+      <li><b>Import a Cubest file</b> brings a backup back, for example on another device or a new web address. It adds new sessions and any solves you don't already have, so importing the same file twice won't double anything.</li></ul>
+      <p>Your solves only live in this browser, so a backup now and then is a good idea.</p>` },
     { id: 'aicoach', q: 'How does the AI coach work?', a: `
       <p>At the bottom of a solve's Analysis, <b>Generate AI analysis</b> sends that solve's breakdown (steps, times, turns, cases, rotations and your recent stage averages) to an AI, which replies with a verdict, where you lost the most time, what happened and what to practise next. The result is saved with the solve.</p>
       <ul><li><b>In the Claude version of this app</b>, Claude works with no setup.</li>
