@@ -430,6 +430,8 @@ body.tm-focusing #main { touch-action: none; -webkit-user-select: none; user-sel
 .tm-status kbd { font-family: var(--f-mono); font-size: .9em; padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; background: var(--surface) }
 #main.tm-focusing .tm-focus:has(.mzone) { min-height: 70vh; justify-content: center }
 .machow { margin: 4px 0 10px; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; font-size: 14px } .macerr { color: var(--ink); font-weight: 600 }
+.btlog { margin-top: 24px; border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px } .btlog summary { cursor: pointer; font-weight: 600; color: var(--muted) }
+.btlog pre { max-height: 260px; overflow: auto; font-size: 11px; line-height: 1.45; background: var(--bg); padding: 8px; border-radius: 8px; white-space: pre-wrap; word-break: break-all; margin: 8px 0 0 }
 .nocase { text-transform: none; letter-spacing: 0 }
 .ai-raw { white-space: pre-wrap; margin: 0 } .ai-by { margin: 0 }
 .lt-actions { margin-top: 10px; justify-content: flex-start }
@@ -3527,6 +3529,22 @@ const SmartCube = (() => {
   const bytes = dv => { const r = []; for (let i = 0; i < dv.byteLength; i++) r.push(dv.getUint8(i)); return r; };
   const macBytes = mac => mac.split(':').map(h => parseInt(h, 16));
   const MAC_RE = /^([0-9A-F]{2}:){5}[0-9A-F]{2}$/i;
+  // ---- Bluetooth log, to diagnose problems on devices we can't test on
+  const LOG = []; let logT0 = performance.now();
+  const hex = a => Array.from(a, x => x.toString(16).padStart(2, '0')).join('');
+  function log(msg) { LOG.push(((performance.now() - logT0) / 1000).toFixed(2).padStart(7) + 's  ' + msg); if (LOG.length > 300) LOG.splice(0, LOG.length - 300); }
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const props = c => { try { const p = c.properties; return ['read', 'write', 'writeWithoutResponse', 'notify', 'indicate'].filter(k => p && p[k]).join(',') || '?'; } catch (e) { return '?'; } };
+  // write the way the characteristic says it wants; retry once (phones often refuse a write while busy)
+  async function gattWrite(chr, data, label) {
+    let mode = 'writeValue';
+    try { const p = chr.properties; if (p && p.writeWithoutResponse && chr.writeValueWithoutResponse) mode = 'writeValueWithoutResponse'; else if (p && p.write && chr.writeValueWithResponse) mode = 'writeValueWithResponse'; } catch (e) {}
+    for (let k = 0; k < 2; k++) {
+      try { await chr[mode](data); log(`write ${label} ok (${mode})`); return true; }
+      catch (e) { log(`write ${label} failed (${mode}): ${e && e.message}`); await sleep(150); }
+    }
+    return false;
+  }
 
   // ---------- MoYu WeiLong AI (MY32) ----------
   const MY = {
@@ -3676,46 +3694,56 @@ const SmartCube = (() => {
       optionalManufacturerData: [...MY.CICS, ...QY.CICS],
     });
     const name = (device.name || '').trim();
+    LOG.length = 0; logT0 = performance.now(); log(`picked ${name} · ${navigator.userAgent}`);
     kind = name.startsWith('WCU_MY3') ? 'moyu' : 'qiyi';
     const model = kind === 'moyu' ? MY : QY;
     emit('status', { state: 'connecting', name });
-    let mac = macOverride || loadMac(name);
-    if (!mac) mac = await advMac(device, model);
-    if (!mac) mac = model.defaultMac(name);
+    let mac = macOverride || loadMac(name), macSrc = macOverride ? 'typed' : mac ? 'saved' : '';
+    if (!mac) { mac = await advMac(device, model); if (mac) macSrc = 'advertisement'; }
+    if (!mac) { mac = model.defaultMac(name); if (mac) macSrc = 'guessed from name'; }
+    log(`address ${mac || 'none'} (${macSrc || 'unknown'})`);
     if (!mac || !MAC_RE.test(mac)) { emit('needMac', { name }); throw new Error('need-mac'); }
-    device.addEventListener('gattserverdisconnected', () => emit('status', { state: 'disconnected', name }));
-    const gatt = await device.gatt.connect();
+    device.addEventListener('gattserverdisconnected', () => { log('disconnected'); emit('status', { state: 'disconnected', name }); });
+    const gatt = await device.gatt.connect(); log('gatt connected');
     if (kind === 'moyu') {
-      const svc = await gatt.getPrimaryService(MY.SERVICE);
+      const svc = await gatt.getPrimaryService(MY.SERVICE); log('service found');
       chrRead = await svc.getCharacteristic(MY.READ);
       chrWrite = await svc.getCharacteristic(MY.WRITE);
-      codec = myCodec(mac); prevCnt = -1;
+      log(`read chr [${props(chrRead)}] · write chr [${props(chrWrite)}]`);
+      codec = myCodec(mac); prevCnt = -1; myNotes = 0; myTypes = {}; myGot = false; badCount = 0;
       chrRead.addEventListener('characteristicvaluechanged', ev => onMoyu(bytes(ev.target.value), name, mac));
-      await chrRead.startNotifications();
-      const send = async r => chrWrite.writeValue(new Uint8Array(codec.encode(r)));
-      for (const op of [161, 163, 164]) { const r = new Array(20).fill(0); r[0] = op; await send(r); }
+      await chrRead.startNotifications(); log('notifications on');
+      await sleep(300);   // phones need a moment after enabling notifications before the cube hears requests
+      const send = async r => { if (!(await gattWrite(chrWrite, new Uint8Array(codec.encode(r)), 'op ' + r[0]))) throw new Error('write failed'); };
+      const hello = async () => { for (const op of [161, 163, 164]) { const r = new Array(20).fill(0); r[0] = op; await send(r).catch(() => {}); await sleep(60); } const g = new Array(20).fill(0); g[0] = 172; g[2] = 1; await send(g).catch(() => {}); };
+      await hello();
+      // resend the requests if the cube hasn't answered yet
+      const devR = device; setTimeout(async () => { if (device === devR && device.gatt.connected && !myGot) { log('no answer yet, sending requests again'); await hello(); } }, 1200);
       // ask for the cube's own state now and then while it's still, so lost Bluetooth messages get corrected
       mySend = send; clearInterval(myTimer);
       myTimer = setInterval(() => { const now = performance.now(); if (!device || !device.gatt.connected) return clearInterval(myTimer); if (now - myLastMove > 700 && now - myLastAsk > 2500) myAsk(); }, 500);
-      const g = new Array(20).fill(0); g[0] = 172; g[2] = 1; await send(g); // turn on gyro notifications
       // The cube only answers requests encrypted with its own address. Silence after connecting means the
       // address is wrong (phones can't read it, so we may have guessed it from the name).
-      myGot = false; const dev0 = device;
-      setTimeout(() => { if (device === dev0 && device.gatt.connected && !myGot) emit('badMac', { name, mac, silent: true }); }, 3000);
+      const dev0 = device;
+      setTimeout(() => { if (device === dev0 && device.gatt.connected && !myGot) { log(`silent: ${myNotes} notifications, none decoded`); emit('badMac', { name, mac, silent: true }); } }, 3500);
     } else {
       const svc = await gatt.getPrimaryService(QY.SERVICE);
       chrRead = chrWrite = await svc.getCharacteristic(QY.CHR);
+      log(`chr [${props(chrRead)}]`);
       chrRead.addEventListener('characteristicvaluechanged', ev => onQiyi(bytes(ev.target.value), name, mac));
-      await chrRead.startNotifications();
-      await chrWrite.writeValue(new Uint8Array(qyEncrypt(qyHello(mac))));
+      await chrRead.startNotifications(); log('notifications on');
+      await chrWrite.writeValue(new Uint8Array(qyEncrypt(qyHello(mac)))); log('hello sent');
     }
     emit('status', { state: 'connected', name, mac, kind });
     return { name, mac, kind };
   }
-  let badCount = 0, myGot = false;
+  let badCount = 0, myGot = false, myNotes = 0, myTypes = {};
   function myAsk() { if (!mySend) return; myLastAsk = performance.now(); const r = new Array(20).fill(0); r[0] = 163; mySend(r).catch(() => {}); }
   function onMoyu(raw, name, mac) {
-    const ev = myParse(codec.decode(raw));
+    const dec = codec.decode(raw), ev = myParse(dec);
+    myNotes++; myTypes[ev.type] = (myTypes[ev.type] || 0) + 1;
+    if (myNotes <= 6 || (ev.type === 'unknown' && myTypes.unknown <= 5)) log(`notify #${myNotes} len ${raw.length} raw ${hex(raw).slice(0, 40)} → ${ev.type} (decoded ${hex(dec).slice(0, 12)})`);
+    if (myNotes === 50 || myNotes % 500 === 0) log('notify counts ' + JSON.stringify(myTypes));
     if (ev.type === 'unknown') { if (++badCount >= 3) emit('badMac', { name, mac }); return; }
     badCount = 0; myGot = true; saveMac(name, mac);
     if (ev.type === 'facelets') { if (prevCnt === -1) { prevCnt = ev.moveCnt; emit('facelets', ev.facelets); } else if (ev.moveCnt === prevCnt) emit('report', ev.facelets); }
@@ -3766,7 +3794,7 @@ const SmartCube = (() => {
   const on = (ev, fn) => { handlers[ev] = fn; };
   const forgetMac = n => { try { localStorage.removeItem(macKey(n)); } catch (e) {} };
 
-  return { connect, disconnect, on, supported, forgetMac, MAC_RE,
+  return { connect, disconnect, on, supported, forgetMac, MAC_RE, log, getLog: () => LOG.slice(),
     _test: { myCodec, myParse, myParseFacelet, qyEncrypt, qyDecrypt, qyParse, qyParseFacelet, crc16modbus, MY, QY } };
 })();
 // SmartCube;
@@ -4116,10 +4144,15 @@ function renderSmart() {
       <ul class="machow"><li><b>Easiest:</b> on a computer where the cube already works in Cubest, connect it and click the cube button at the top. The address is shown there (e.g. <code>CF:30:16:00:12:34</code>).</li>
       <li><b>Android:</b> the free <b>nRF Connect</b> app lists nearby devices with their address. Look for ${esc(SM.macFor || 'your cube')} (turn the cube first to wake it).</li>
       <li>The official MoYu / QiYi app or csTimer's Bluetooth log may also show it. iPhones hide addresses, so on iPhone use one of the other ways.</li></ul>
-      <div class="row"><input id="sm-mac" placeholder="AA:BB:CC:DD:EE:FF" autocomplete="off" spellcheck="false"><button class="primary" data-sm="mac">Connect with this address</button></div></div>` : ''}
+      <div class="row"><input id="sm-mac" placeholder="AA:BB:CC:DD:EE:FF" autocomplete="off" spellcheck="false" value="${esc(SM.triedMac || '')}"><button class="primary" data-sm="mac">Connect with this address</button></div>
+      ${SmartCube.getLog().length ? `<p class="hint">Sure the address is right? <button class="linkbtn" data-sm="copylog">Copy the Bluetooth log</button> and share it, so the problem can be tracked down.</p>` : ''}</div>` : ''}
     <div id="sm-live">${liveHTML()}</div>
     <h2 class="gh">Practice</h2>
-    <div id="sm-practice">${practiceHTML()}</div>`;
+    <div id="sm-practice">${practiceHTML()}</div>
+    <details class="btlog"><summary>Bluetooth log (for troubleshooting)</summary>
+      <p class="hint">If your cube misbehaves, connect it, wait a few seconds, then copy this and send it along.</p>
+      <div class="row"><button class="ghost small" data-sm="copylog">Copy log</button><button class="ghost small" data-sm="showlog">Refresh</button></div>
+      <pre id="btlog-pre">${esc(SmartCube.getLog().join('\n') || 'Nothing yet. Connect a cube first.')}</pre></details>`;
 }
 views.smart = renderSmart;
 const smUpdate = () => { if ($('#main').dataset.v !== 'smart') return; const l = $('#sm-live'), p = $('#sm-practice'); if (l) l.innerHTML = liveHTML(); if (p) p.innerHTML = practiceHTML(); };
@@ -4263,7 +4296,7 @@ SmartCube.on('lost', () => { SM.lostMsgs++; });
 SmartCube.on('needMac', ({ name }) => { SM.needMac = true; SM.macFor = name; SM.conn = 'idle'; SM.err = ''; if ($('#main').dataset.v !== 'smart') { location.hash = '#smart'; toast("Enter your cube's address to connect"); } rerenderSmart(); });
 SmartCube.on('badMac', ({ name, mac, silent }) => {
   SmartCube.forgetMac(name); SmartCube.disconnect(); SM.needMac = true; SM.macFor = name; SM.triedMac = mac || ''; SM.conn = 'idle';
-  SM.err = silent ? "The cube connected but isn't answering, so the address the app used is probably wrong." : "The saved address didn't work for this cube.";
+  SM.err = silent ? "The cube connected but isn't answering. Usually that means the address is wrong." : "The saved address didn't work for this cube.";
   if ($('#main').dataset.v !== 'smart') { location.hash = '#smart'; toast("Your cube needs its address. See the Smart cube tab"); }
   rerenderSmart();
 });
@@ -4273,7 +4306,7 @@ async function doConnect(mac) {
   SM.err = ''; SM.conn = 'connecting'; rerenderSmart();
   try { await SmartCube.connect(mac); }
   catch (e) {
-    const msg = String(e && (e.message || e));
+    const msg = String(e && (e.message || e)); SmartCube.log('connect error: ' + msg);
     if (msg === 'need-mac') return;
     SM.conn = 'idle';
     SM.err = /NotFoundError|cancel/i.test(msg) ? 'No cube picked. Turn a face to wake it and try again.'
@@ -4286,6 +4319,10 @@ document.addEventListener('click', e => {
   const t = e.target.closest('button'); if (!t) return;
   const a = t.dataset.sm;
   if (a === 'connect') doConnect();
+  else if (a === 'copylog' || a === 'showlog') {
+    const txt = SmartCube.getLog().join('\n') || 'empty'; const pre = document.getElementById('btlog-pre'); if (pre) pre.textContent = txt;
+    if (a === 'copylog') { const d = document.querySelector('.btlog'); if (d) d.open = true; navigator.clipboard.writeText(txt).then(() => toast('Bluetooth log copied'), () => toast('Copy failed. Select the text in the log instead')); }
+  }
   else if (a === 'mac') { const v = ($('#sm-mac').value || '').trim().toUpperCase(); if (!SmartCube.MAC_RE.test(v)) { SM.err = 'That address should look like AA:BB:CC:DD:EE:FF.'; rerenderSmart(); return; } doConnect(v); }
   else if (a === 'forgetmac') { const n = SM.name; SmartCube.forgetMac(n); SmartCube.disconnect(); SM.conn = 'idle'; SM.mac = ''; SM.err = ''; try { closePops(); } catch (e) {} rerenderSmart(); toast('Address cleared. Connect again to enter a new one'); }
   else if (a === 'disconnect') { SmartCube.disconnect(); SM.conn = 'idle'; SM.err = ''; rerenderSmart(); }
